@@ -1,0 +1,332 @@
+<?xml version="1.0"?>
+<ctml>
+  <validate reactions="yes" species="yes"/>
+
+  <!-- phase anode     -->
+  <phase dim="3" id="anode">
+    <elementArray datasrc="elements.xml">Li C</elementArray>
+    <speciesArray datasrc="#species_data">Li[anode] V[anode]</speciesArray>
+    <reactionArray datasrc="#reaction_data">
+      <include max="None" min="None"/>
+    </reactionArray>
+    <state>
+      <moleFractions>Li[anode]:0.5 V[anode]:0.5</moleFractions>
+    </state>
+    <thermo model="IdealSolidSolutionTabulatedThermo">
+      <modifiable_species>Li[anode]</modifiable_species>
+      <data>battery/Graphite_x_dH_dS_Guo2011.dat</data>
+    </thermo>
+    <transport model="None"/>
+    <kinetics model="none"/>
+    <standardConc model="molar_volume"/>
+  </phase>
+
+  <!-- phase cathode     -->
+  <phase dim="3" id="cathode">
+    <elementArray datasrc="elements.xml">Li Co O</elementArray>
+    <speciesArray datasrc="#species_data">Li[cathode] V[cathode]</speciesArray>
+    <reactionArray datasrc="#reaction_data">
+      <include max="None" min="None"/>
+    </reactionArray>
+    <state>
+      <moleFractions>Li[cathode]:0.5 V[cathode]:0.5</moleFractions>
+    </state>
+    <thermo model="IdealSolidSolutionTabulatedThermo">
+      <modifiable_species>Li[cathode]</modifiable_species>
+      <data>battery/LCO_x_dH_dS_Guo2011.dat</data>
+    </thermo>
+    <transport model="None"/>
+    <kinetics model="none"/>
+    <standardConc model="molar_volume"/>
+  </phase>
+
+  <!-- phase electron     -->
+  <phase dim="3" id="electron">
+    <elementArray datasrc="elements.xml">E</elementArray>
+    <speciesArray datasrc="#species_data">electron</speciesArray>
+    <state>
+      <moleFractions>electron:1.0</moleFractions>
+    </state>
+    <thermo model="Metal">
+      <density units="kg/m3">1812.0</density>
+    </thermo>
+    <transport model="None"/>
+    <kinetics model="none"/>
+  </phase>
+
+  <!-- phase lithium_metal     -->
+  <phase dim="3" id="lithium_metal">
+    <elementArray datasrc="elements.xml">Li</elementArray>
+    <speciesArray datasrc="#species_data">Li[metal]</speciesArray>
+    <state>
+      <moleFractions>Li[metal]:1.0</moleFractions>
+    </state>
+    <thermo model="Metal">
+      <density units="kg/m3">1812.0</density>
+    </thermo>
+    <transport model="None"/>
+    <kinetics model="none"/>
+  </phase>
+
+  <!-- phase electrolyte     -->
+  <phase dim="3" id="electrolyte">
+    <elementArray datasrc="elements.xml">Li P F C H O E</elementArray>
+    <speciesArray datasrc="#species_data">bulk[C3H4O3] bulk[C4H6O3] Li+[elyt] PF6-[elyt]</speciesArray>
+    <state>
+      <pressure units="Pa">101325.0</pressure>
+      <moleFractions>bulk[C3H4O3]:0.6 bulk[C4H6O3]:0.2 Li+[elyt]:0.1 PF6-[elyt]:0.1</moleFractions>
+    </state>
+    <thermo model="Incompressible">
+      <density units="kg/m3">1195.0</density>
+    </thermo>
+    <transport model="None"/>
+    <kinetics model="none"/>
+  </phase>
+
+  <!-- phase edge_anode_electrolyte     -->
+  <phase dim="1" id="edge_anode_electrolyte">
+    <elementArray datasrc="elements.xml"/>
+    <speciesArray datasrc="#species_data">(dummy)</speciesArray>
+    <reactionArray datasrc="#reaction_data">
+      <include max="anode_*" min="anode_*"/>
+    </reactionArray>
+    <thermo model="Edge">
+      <site_density units="mol/cm2">0.01</site_density>
+    </thermo>
+    <kinetics model="Edge"/>
+    <transport model="None"/>
+    <phaseArray>electrolyte anode electron</phaseArray>
+  </phase>
+
+  <!-- phase edge_reference_electrode     -->
+  <phase dim="1" id="edge_reference_electrode">
+    <elementArray datasrc="elements.xml"/>
+    <speciesArray datasrc="#species_data">(dummy)</speciesArray>
+    <reactionArray datasrc="#reaction_data">
+      <include max="reference_*" min="reference_*"/>
+    </reactionArray>
+    <thermo model="Edge">
+      <site_density units="mol/cm2">0.01</site_density>
+    </thermo>
+    <kinetics model="Edge"/>
+    <transport model="None"/>
+    <phaseArray>electrolyte lithium_metal electron</phaseArray>
+  </phase>
+
+  <!-- phase edge_cathode_electrolyte     -->
+  <phase dim="1" id="edge_cathode_electrolyte">
+    <elementArray datasrc="elements.xml"/>
+    <speciesArray datasrc="#species_data">(dummy)</speciesArray>
+    <reactionArray datasrc="#reaction_data">
+      <include max="cathode_*" min="cathode_*"/>
+    </reactionArray>
+    <thermo model="Edge">
+      <site_density units="mol/cm2">0.01</site_density>
+    </thermo>
+    <kinetics model="Edge"/>
+    <transport model="None"/>
+    <phaseArray>electrolyte cathode electron</phaseArray>
+  </phase>
+
+  <!-- species definitions     -->
+  <speciesData id="species_data">
+
+    <!-- species Li[metal]    -->
+    <species name="Li[metal]">
+      <atomArray>Li:1 </atomArray>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">0</h0>
+           <s0 units="J/mol/K">29.12</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+
+    <!-- species electron    -->
+    <species name="electron">
+      <atomArray>E:1 </atomArray>
+      <charge>-1</charge>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">0.0</h0>
+           <s0 units="J/mol/K">0.0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+
+    <!-- species Li[anode]    -->
+    <species name="Li[anode]">
+      <atomArray>C:6 Li:1 </atomArray>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">0</h0>
+           <s0 units="J/mol/K">0.0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+      <standardState model="constant_incompressible">
+        <molarVolume units="cm3/mol">13.02</molarVolume>
+      </standardState>
+    </species>
+
+    <!-- species V[anode]    -->
+    <species name="V[anode]">
+      <atomArray>C:6 </atomArray>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">0.0</h0>
+           <s0 units="J/mol/K">0.0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+      <standardState model="constant_incompressible">
+        <molarVolume units="cm3/mol">34.54</molarVolume>
+      </standardState>
+    </species>
+
+    <!-- species Li[cathode]    -->
+    <species name="Li[cathode]">
+      <atomArray>Co:1 O:2 Li:1 </atomArray>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">0.0</h0>
+           <s0 units="J/mol/K">0.0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+
+    <!-- species V[cathode]    -->
+    <species name="V[cathode]">
+      <atomArray>Co:1 O:2 </atomArray>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">0</h0>
+           <s0 units="J/mol/K">0.0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+
+    <!-- species (dummy)    -->
+    <species name="(dummy)">
+      <atomArray/>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">0.0</h0>
+           <s0 units="J/mol/K">0.0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+
+    <!-- species bulk[C3H4O3]    -->
+    <species name="bulk[C3H4O3]">
+      <atomArray>H:4 C:3 O:3 </atomArray>
+      <thermo>
+        <NASA Tmax="1000.0" Tmin="180.0" P0="100000.0">
+           <floatArray name="coeffs" size="7">
+             -6.976300000E+00,   1.003000000E-01,  -8.000000000E-05,   0.000000000E+00, 
+             0.000000000E+00,  -7.110000000E+04,   3.450000000E+01</floatArray>
+        </NASA>
+      </thermo>
+    </species>
+
+    <!-- species bulk[C4H6O3]    -->
+    <species name="bulk[C4H6O3]">
+      <atomArray>H:6 C:4 O:3 </atomArray>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="J/mol">0.0</h0>
+           <s0 units="J/mol/K">0.0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+
+    <!-- species Li+[elyt]    -->
+    <species name="Li+[elyt]">
+      <atomArray>E:-1 Li:1 </atomArray>
+      <charge>1</charge>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">-278.49</h0>
+           <s0 units="J/mol/K">13.4</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+
+    <!-- species PF6-[elyt]    -->
+    <species name="PF6-[elyt]">
+      <atomArray>P:1 E:1 F:6 </atomArray>
+      <charge>-1</charge>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="J/mol">0.0</h0>
+           <s0 units="J/mol/K">0.0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+  </speciesData>
+  <reactionData id="reaction_data">
+
+    <!-- reaction anode_reaction    -->
+    <reaction reversible="yes" type="edge" id="anode_reaction">
+      <equation>Li+[elyt] + V[anode] + electron [=] Li[anode]</equation>
+      <rateCoeff type="exchangecurrentdensity">
+        <electrochem beta="0.5"/>
+        <Arrhenius>
+           <A>2.000000E+01</A>
+           <b>0.0</b>
+           <E units="kJ/mol">0.000000</E>
+        </Arrhenius>
+      </rateCoeff>
+      <reactants>electron:1 Li+[elyt]:1.0 V[anode]:1</reactants>
+      <products>Li[anode]:1.0</products>
+    </reaction>
+
+    <!-- reaction reference_reaction    -->
+    <reaction reversible="yes" type="edge" id="reference_reaction">
+      <equation>Li+[elyt] + electron [=] Li[metal]</equation>
+      <rateCoeff type="exchangecurrentdensity">
+        <electrochem beta="0.5"/>
+        <Arrhenius>
+           <A>2.000000E+01</A>
+           <b>0.0</b>
+           <E units="kJ/mol">0.000000</E>
+        </Arrhenius>
+      </rateCoeff>
+      <reactants>electron:1 Li+[elyt]:1.0</reactants>
+      <products>Li[metal]:1.0</products>
+    </reaction>
+
+    <!-- reaction cathode_reaction    -->
+    <reaction reversible="yes" type="edge" id="cathode_reaction">
+      <equation>Li+[elyt] + V[cathode] + electron [=] Li[cathode]</equation>
+      <rateCoeff type="exchangecurrentdensity">
+        <electrochem beta="0.5"/>
+        <Arrhenius>
+           <A>2.000000E+01</A>
+           <b>0.0</b>
+           <E units="kJ/mol">0.000000</E>
+        </Arrhenius>
+      </rateCoeff>
+      <reactants>electron:1 V[cathode]:1 Li+[elyt]:1.0</reactants>
+      <products>Li[cathode]:1.0</products>
+    </reaction>
+  </reactionData>
+</ctml>
