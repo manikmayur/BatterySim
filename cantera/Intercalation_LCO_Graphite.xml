@@ -15,7 +15,7 @@
     <thermo model="ConstDensityTabulatedThermo">
       <density units="kg/m3">2270</density>
       <modifiable_species>Li[anode]</modifiable_species>
-      <data>battery/Graphite_x_dH_dS_Guo2011.dat</data>
+      <data>data/anode/Graphite_x_dH_dS_Guo2011.dat</data>
     </thermo>
     <transport model="None"/>
     <kinetics model="none"/>
@@ -34,7 +34,7 @@
     <thermo model="ConstDensityTabulatedThermo">
       <density units="kg/m3">4790</density>
       <modifiable_species>Li[cathode]</modifiable_species>
-      <data>battery/LCO_x_dH_dS_Guo2011.dat</data>
+      <data>data/cathode/LCO_x_dH_dS_Guo2011.dat</data>
     </thermo>
     <transport model="None"/>
     <kinetics model="none"/>

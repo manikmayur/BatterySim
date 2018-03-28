@@ -28,7 +28,7 @@ int main() {
 	std::string xmlFile;
 	std::cout<<"Testing Cantera"<<std::endl;
 	//xmlFile = "Work_LiO2_organic_LiBaLu_November_1M_parallel_reactions.xml";
-	xmlFile = "Intercalation_LCO_Graphite.xml";
+	xmlFile = "cantera\\Intercalation_LCO_Graphite.xml";
 	//xmlFile = "Final_Kupper_2016_JElectrochemSoc_LFP_C6_revised.xml";
 	try {
 		//thermoInitAnode_demo(xmlFile);

@@ -25,7 +25,7 @@ void thermoOxygenSolubility(std::string xmlFile);
 int main() {
 	std::string xmlFile;
 	std::cout<<"Testing Cantera"<<std::endl;
-	xmlFile = "Work_LiO2_organic_LiBaLu_November_1M_parallel_reactions.xml";
+	xmlFile = "cantera\\Work_LiO2_organic_LiBaLu_November_1M_parallel_reactions.xml";
 	try {
 		//thermoIDSSElectrolyte_demo(xmlFile);
 		//thermoIDSSCathodeROP_demo(xmlFile);
