@@ -15,27 +15,34 @@
 #include "cantera/thermo/SurfPhase.h"
 #include "cantera/kinetics/importKinetics.h"
 #include "cantera/Edge.h"
+#include "cantera/reactionpaths.h"
 #include <string>
 
 using namespace Cantera;
 
-void thermoInitAnode_demo(std::string xmlFile);
-void thermoInitCathodeROP_demo(std::string xmlFile);
-void thermoInitAnodeROP_demo(std::string xmlFile);
-void thermoInitRefdemo(std::string xmlFile);
+void thermoInitAnode_demo(std::string inFile);
+void thermoInitCathodeROP_demo(std::string inFile);
+void thermoInitAnodeROP_demo(std::string inFile);
+void thermoInitRefdemo(std::string inFile);
+void writeRxnPathDiagram(double time, ReactionPathBuilder& b,
+		Kinetics& reaction, std::ostream& logfile, std::ostream& outfile);
+void thermoTestSPM(std::string inFile);
+void thermoInitReactionROP_demo(std::string inFile);
 
 int main() {
-	std::string xmlFile;
+	std::string inFile;
 	std::cout<<"Testing Cantera"<<std::endl;
-	//xmlFile = "Work_LiO2_organic_LiBaLu_November_1M_parallel_reactions.xml";
-	xmlFile = "cantera\\Intercalation_LCO_Graphite.xml";
-	//xmlFile = "Final_Kupper_2016_JElectrochemSoc_LFP_C6_revised.xml";
+	inFile = "cantera\\Work_LiO2_organic_LiBaLu_November_1M_parallel_reactions_inwork.cti";
+	//inFile = "cantera\\Intercalation_LCO_Graphite.xml";
+	//inFile = "Final_Kupper_2016_JElectrochemSoc_LFP_C6_revised.xml";
 	try {
-		//thermoInitAnode_demo(xmlFile);
-		//thermoInitAnodeROP_demo(xmlFile);
-		//thermoInitRefdemo(xmlFile);
-		thermoInitCathodeROP_demo(xmlFile);
-		//thermoInitElectrolyte_demo(xmlFile);
+		//thermoInitAnode_demo(inFile);
+		//thermoInitAnodeROP_demo(inFile);
+		//thermoInitRefdemo(inFile);
+		//thermoInitCathodeROP_demo(inFile);
+		//thermoTestSPM(inFile);
+		thermoInitReactionROP_demo(inFile);
+		//thermoInitElectrolyte_demo(inFile);
 		//simple_demo2();
 	}
 	catch (CanteraError& err){
@@ -44,7 +51,7 @@ int main() {
 	return 0;
 }
 
-void thermoInitAnode_demo(std::string xmlFile) {
+void thermoInitAnode_demo(std::string inFile) {
 	std::string s = "";
 	double x=0.0;
 	double c[4];
@@ -52,10 +59,9 @@ void thermoInitAnode_demo(std::string xmlFile) {
 	double T=298.15;
 	double P=101325;
 	double minTemp, maxTemp, refPressure;
-	double mu = 0.0;
 	int type = 0;
 	try {
-		ThermoPhase* tp = (newPhase(xmlFile,"anode"));
+		ThermoPhase* tp = (newPhase(inFile,"anode"));
 		IdealSolidSolnPhaseTabulatedThermo* Li_ion = dynamic_cast<IdealSolidSolnPhaseTabulatedThermo*> (tp);
 		//ConstDensityTabulatedThermo* Li_ion = dynamic_cast<ConstDensityTabulatedThermo*> (tp);
 		//std::cout<<Li_ion->report();
@@ -114,31 +120,30 @@ void printData(ThermoPhase* tp) {
 		std::cout << tp->speciesName(k) <<" DH= "<< H[k]*GasConstant*T <<" DS= " << S[k]*GasConstant<<" DG= " << G[k]*GasConstant*T<< std::endl;
 	}
 }
-void thermoInitCathodeROP_demo(std::string xmlFile) {
+
+void thermoInitCathodeROP_demo(std::string inFile) {
 	std::string s = "";
-	double ns[2];
 	double T=298.15;
 	double P=101325;
-	double x, dG, dH, dS, dG0, f;
+	double dG, dH, dS, dG0;
 	try {
-		ThermoPhase* tp = (newPhase(xmlFile,"electrolyte"));
-		ThermoPhase* tp1 = (newPhase(xmlFile,"cathode"));
-		ThermoPhase* tp2 = (newPhase(xmlFile,"conductor"));
+		ThermoPhase* tp = (newPhase(inFile,"electrolyte"));
+		//ThermoPhase* tp1 = (newPhase(inFile,"cathode"));
+		ThermoPhase* tp2 = (newPhase(inFile,"conductor"));
 		std::vector<ThermoPhase*> phaseList;
 		phaseList.push_back(tp);
-		phaseList.push_back(tp1);
+		//phaseList.push_back(tp1);
 		phaseList.push_back(tp2);
-		Edge surf(xmlFile, "interface_cathode", phaseList);
-		//Interface surf(xmlFile, "interface_cathode", phaseList);
-		std::cout<<surf.phaseIndex("cathode")<<" "<<surf.phaseIndex("electrolyte")<<" "<<surf.phaseIndex("electron_cathode");
+		//Edge surf(inFile, "interface_cathode", phaseList);
+		Interface surf(inFile, "C_surface", phaseList);
+
+		//Interface surf(inFile, "interface_cathode", phaseList);
+		//std::cout<<surf.phaseIndex("cathode")<<" "<<surf.phaseIndex("electrolyte")<<" "<<surf.phaseIndex("electron_cathode");
 		tp->setState_TP(T,P);
-		tp1->setState_TP(T,P);
+		//tp1->setState_TP(T,P);
 		tp2->setState_TP(T,P);
 		surf.setState_TP(T,P);
-		x=0.1;
-		ns[0]=x;
-		ns[1]=1-x;
-		tp->setMoleFractions(ns);
+		//tp->setMoleFractions(ns);
 		for (size_t k = 0; k < phaseList.size(); k++) {
 			phaseList[k]->setState_TP(T,P);
 		}
@@ -147,24 +152,46 @@ void thermoInitCathodeROP_demo(std::string xmlFile) {
 		surf.getDeltaSSGibbs(&dG0);
 		surf.getDeltaEnthalpy(&dH);
 		surf.getDeltaEntropy(&dS);
+		vector_fp kc(surf.nReactions());
+		vector_fp fdot(surf.nReactions());
+		vector_fp rdot(surf.nReactions());
+		surf.getEquilibriumConstants(kc.data());
+		surf.getFwdRateConstants(fdot.data());
+		surf.getRevRateConstants(rdot.data());
 		std::cout<<"No: "<<surf.nReactions()<<" "<<surf.reactionString(0)<<std::endl;
+		std::cout<<"dG= "<<dG0/1000<<" dH= "<<dH/1000<<" dS= "<<dS/1000<<" Kc = " <<kc[0]<<std::endl;
+
 		vector_fp wdot(surf.nTotalSpecies());
 		surf.getNetProductionRates(wdot.data());
-		std::cout<<"dG= "<<dG0/1000<<" dH= "<<dH/1000<<" dS= "<<dS/1000<<std::endl;
-		f = std::exp(0.5/(GasConstant*T)*(-dG0));
+
 		//surf.setMultiplier(0,f);
-		//surf.getNetProductionRates(wdot.data());
 		//for (size_t k = 0; k < phaseList.size(); k++) {
-			//std::cout << "Name: "<<phaseList[k]->name()<<" density: "<<phaseList[k]->density()<< std::endl;
-			for (size_t kk = 0; kk < surf.nTotalSpecies(); kk++)
-			std::cout << surf.kineticsSpeciesName(kk)<< " wdot = " << wdot[kk] << std::endl;
+		//std::cout << "Name: "<<phaseList[k]->name()<<" density: "<<phaseList[k]->density()<< std::endl;
+		for (size_t kk = 0; kk < surf.nTotalSpecies(); kk++)
+			std::cout << surf.kineticsSpeciesName(kk)<< " wdot = " << wdot[kk]<< std::endl;
+
+		// create a reaction path diagram builder
+		ReactionPathBuilder b;
+		std::ofstream rplog("rp1.log");   // log file
+		std::ofstream rplot("rp1.dot");   // output file
+		b.init(rplog, surf);         // initialize
+
+		// main loop
+		writeRxnPathDiagram(0, b, surf, rplog, rplot);
+		/*
+		for (int i = 1; i <= nsteps; i++) {
+			tm = i*dt;
+			sim.advance(tm);
+			writeRxnPathDiagram(tm, b, gas, rplog, rplot);
+		}*/
+
 		//}
 	} catch (CanteraError& err){
 		std::cout<<err.what()<< std::endl;
 	}
 }
 
-void thermoInitAnodeROP_demo(std::string xmlFile) {
+void thermoInitAnodeROP_demo(std::string inFile) {
 	std::string s = "";
 	std::string phName, spName;
 	double ns[2];
@@ -173,12 +200,11 @@ void thermoInitAnodeROP_demo(std::string xmlFile) {
 	double x,dG[20],dH[20],dS[20],dG0[20],dH0[20],dS0[20];
 	double minTemp, maxTemp, refPressure;
 	double c[4];
-	double Ec1, Ec2;
 	int type;
 
-	ThermoPhase* tp = (newPhase(xmlFile,"anode"));
-	ThermoPhase* tp1 = (newPhase(xmlFile,"electrolyte"));
-	ThermoPhase* tp2 = (newPhase(xmlFile,"electron"));
+	ThermoPhase* tp = (newPhase(inFile,"anode"));
+	ThermoPhase* tp1 = (newPhase(inFile,"electrolyte"));
+	ThermoPhase* tp2 = (newPhase(inFile,"electron"));
 
 	std::vector<ThermoPhase*> phaseList;
 
@@ -186,10 +212,10 @@ void thermoInitAnodeROP_demo(std::string xmlFile) {
 	phaseList.push_back(tp1);
 	phaseList.push_back(tp2);
 
-	Edge surf(xmlFile, "edge_anode_electrolyte", phaseList);
+	Edge surf(inFile, "edge_anode_electrolyte", phaseList);
 
-	//Interface surf(xmlFile, "edge_anode_electrolyte", phaseList);
-	//Interface refSurf(xmlFile, "edge_lithium_electrolyte", refPhaseList);
+	//Interface surf(inFile, "edge_anode_electrolyte", phaseList);
+	//Interface refSurf(inFile, "edge_lithium_electrolyte", refPhaseList);
 	std::cout<<surf.phaseIndex("anode")<<" "<<surf.phaseIndex("electrolyte")<<" "<<surf.phaseIndex("electron_anode");
 	tp->setState_TP(T,P);
 	tp1->setState_TP(T,P);
@@ -246,7 +272,6 @@ void thermoInitAnodeROP_demo(std::string xmlFile) {
 	std::cout<<"dG0= "<< dG0[0] <<" dH0= "<< dH0[0] <<" dS0= "<< dS0[0] << std::endl;
 	std::cout<<"dG= " << dG[0] << " dH= "<< dH[0] <<" dS= "<< dS[0] << std::endl;
 	std::cout<<"dGc= "<< dH[0] - T*dS[0] << " Ec=" << -dG[0]/96485e3 << " E0=" << -dG0[0]/96485e3 << std::endl;
-	Ec1 = -dG[0]/96485e3;
 	/*
 	for (size_t n = 0; n < surf.nPhases(); n++) {
 		std::cout<< "Name: " << surf.thermo(n).id()<< " dS: " << surf.thermo(n).getPartialMolarEntropies() << std::endl;
@@ -262,30 +287,25 @@ void thermoInitAnodeROP_demo(std::string xmlFile) {
 	}
 }
 
-void thermoInitRefdemo(std::string xmlFile) {
+void thermoInitRefdemo(std::string inFile) {
 
 	std::string s = "";
 	std::string phName, spName;
-	double ns[2];
 	double T=298.15;
 	double P=101325;
-	double x,dG[20],dH[20],dS[20],dG0[20],dH0[20],dS0[20];
-	double minTemp, maxTemp, refPressure;
-	double c[4];
-	double Ec1, Ec2;
-	int type;
+	double dG[20],dH[20],dS[20],dG0[20],dH0[20],dS0[20];
 
 	std::vector<ThermoPhase*> refPhaseList;
 
-	ThermoPhase* tp1 = (newPhase(xmlFile,"electrolyte"));
-	ThermoPhase* tp2 = (newPhase(xmlFile,"electron"));
-	ThermoPhase* tp = (newPhase(xmlFile,"lithium_metal"));
+	ThermoPhase* tp1 = (newPhase(inFile,"electrolyte"));
+	ThermoPhase* tp2 = (newPhase(inFile,"electron"));
+	ThermoPhase* tp = (newPhase(inFile,"lithium_metal"));
 
 	refPhaseList.push_back(tp);
 	refPhaseList.push_back(tp1);
 	refPhaseList.push_back(tp2);
 
-	Edge refSurf(xmlFile, "edge_reference_electrode", refPhaseList);
+	Edge refSurf(inFile, "edge_reference_electrode", refPhaseList);
 
 	tp->setState_TP(T,P);
 	tp1->setState_TP(T,P);
@@ -328,5 +348,164 @@ void thermoInitRefdemo(std::string xmlFile) {
 
 	for (size_t k = 0; k < tp2->nSpecies(); k++) {
 		std::cout << tp2->speciesName(k)<< " wdot = " << wdot[k+tp1->nSpecies()+tp->nSpecies()] <<" speciesIdx = " <<k+tp1->nSpecies()+tp->nSpecies() << std::endl;
+	}
+}
+
+void writeRxnPathDiagram(double time, ReactionPathBuilder& b,
+		Kinetics& reaction, std::ostream& logfile, std::ostream& outfile)
+{
+	// create a new empty diagram
+	ReactionPathDiagram d;
+	d.show_details = false; // show the details of which reactions contribute to the flux
+	d.threshold = 0.001; // set the threshold for the minimum flux relative value
+	d.bold_color = "orange"; // color for bold lines
+	d.normal_color = "steelblue"; // color for normal-weight lines
+	d.dashed_color = "gray"; // color for dashed lines
+	d.dot_options = "center=1;size=\"6,9\";ratio=auto"; // options for the 'dot' program
+	d.bold_min = 0.0; // minimum relative flux for bold lines
+	d.dashed_max = 0.01; // maximum relative flux for dashed lines
+	d.label_min = 0.01; // minimum relative flux for labels
+	d.scale = -1; // autoscale
+	d.flow_type = OneWayFlow; //OneWayFlow; // set to either NetFlow or OneWayFlow
+	d.arrow_width = -2.0; // arrow width. If < 0, then scale with flux value
+	d.title = fmt::format("time = {} (s)", time); // title
+	b.build(reaction, "E", logfile, d); // build the diagram following elemental nitrogen
+	d.exportToDot(outfile); // write an input file for 'dot'
+}
+
+void thermoTestSPM(std::string inFile) {
+	std::string s = "";
+	double T=298.15;
+	double P=101325;
+	double dG, dH, dS, dG0;
+	try {
+		ThermoPhase* tp = (newPhase(inFile,"anode"));
+		ThermoPhase* tp1 = (newPhase(inFile,"electron"));
+		ThermoPhase* tp2 = (newPhase(inFile,"electrolyte"));
+		std::vector<ThermoPhase*> phaseList;
+		phaseList.push_back(tp);
+		phaseList.push_back(tp1);
+		phaseList.push_back(tp2);
+		Interface surf(inFile, "edge_anode_electrolyte", phaseList);
+
+		//Interface surf(inFile, "interface_cathode", phaseList);
+		//std::cout<<surf.phaseIndex("cathode")<<" "<<surf.phaseIndex("electrolyte")<<" "<<surf.phaseIndex("electron_cathode");
+		tp->setState_TP(T,P);
+		tp1->setState_TP(T,P);
+		tp2->setState_TP(T,P);
+		surf.setState_TP(T,P);
+		for (size_t k = 0; k < phaseList.size(); k++) {
+			phaseList[k]->setState_TP(T,P);
+		}
+		//std::cout<<tp2->molarDensity()<<" : "<<tp2->density()<<std::endl;
+		for (size_t kk = 0; kk < tp->nSpecies(); kk++)
+					std::cout << tp->speciesName(kk)<<" : "<<tp->standardConcentration(kk)<<" : "<< tp->concentration(kk)<< std::endl;
+		for (size_t kk = 0; kk < tp2->nSpecies(); kk++)
+							std::cout<< tp2->speciesName(kk)<<" : "<<tp2->standardConcentration(kk)<<" : "<<tp2->concentration(kk)<< std::endl;
+		surf.setState_TP(T,P);
+		surf.getDeltaGibbs(&dG);
+		surf.getDeltaSSGibbs(&dG0);
+		surf.getDeltaEnthalpy(&dH);
+		surf.getDeltaEntropy(&dS);
+		vector_fp kc(surf.nReactions());
+		vector_fp fdot(surf.nReactions());
+		vector_fp rdot(surf.nReactions());
+		surf.getEquilibriumConstants(kc.data());
+		surf.getFwdRateConstants(fdot.data());
+		surf.getRevRateConstants(rdot.data());
+		std::cout<<"No: "<<surf.nReactions()<<" "<<surf.reactionString(0)<<std::endl;
+		std::cout<<"dG= "<<dG0/1000<<" dH= "<<dH/1000<<" dS= "<<dS/1000<<" Kc = " <<kc[0]<<std::endl;
+		std::cout<<" rf= "<<fdot[0]<<" rr= "<<rdot[0]<<std::endl;
+		surf.getFwdRatesOfProgress(fdot.data());
+		surf.getRevRatesOfProgress(rdot.data());
+		std::cout<<" ropf= "<<fdot[0]<<" ropr= "<<rdot[0]<<std::endl;
+
+		vector_fp wdot(surf.nTotalSpecies());
+		surf.getNetProductionRates(wdot.data());
+
+		//for (size_t k = 0; k < phaseList.size(); k++) {
+		//std::cout << "Name: "<<phaseList[k]->name()<<" density: "<<phaseList[k]->density()<< std::endl;
+		for (size_t kk = 0; kk < surf.nTotalSpecies(); kk++)
+			std::cout << surf.kineticsSpeciesName(kk)<< " wdot = " << wdot[kk]<< std::endl;
+
+	} catch (CanteraError& err){
+		std::cout<<err.what()<< std::endl;
+	}
+}
+
+void thermoInitReactionROP_demo(std::string inFile) {
+	std::string surfName;
+	double T=298.15;
+	double P=101325;
+	try {
+		//surfName = "O_surface";
+		//ThermoPhase* tp2 = (newPhase(inFile,"gas_cathode"));
+		surfName = "C_surface";
+		ThermoPhase* tp2 = (newPhase(inFile,"conductor"));
+		//surfName = "Li2O2_precipitation_from_solution";
+		//ThermoPhase* tp2 = (newPhase(inFile,"Li2O2"));
+		ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
+		std::vector<ThermoPhase*> phaseList;
+		phaseList.push_back(tp1);
+		phaseList.push_back(tp2);
+		Interface surf(inFile, surfName, phaseList);
+		// Set phase standard state
+		tp1->setState_TP(T,P);
+		tp2->setState_TP(T,P);
+		surf.setState_TP(T,P);
+		double mmu0;
+		std::cout<<"\nPrinting species thermodynamics..."<<std::endl;
+		for (size_t k = 0; k < surf.nPhases(); k++) {
+			std::cout << "Name: "<<surf.thermo(k).name()<<" #Species: "<< surf.thermo(k).nSpecies()<<" density: "<<surf.thermo(k).density()<<std::endl;
+			vector_fp mu0(surf.thermo(k).nSpecies());
+			vector_fp mu(surf.thermo(k).nSpecies());
+			vector_fp h0(surf.thermo(k).nSpecies());
+			vector_fp s0(surf.thermo(k).nSpecies());
+			surf.thermo(k).getStandardChemPotentials(mu0.data());
+			surf.thermo(k).getChemPotentials(mu.data());
+			surf.thermo(k).getEnthalpy_RT(h0.data());
+			surf.thermo(k).getEntropy_R(s0.data());
+			for (size_t kk = 0; kk < surf.thermo(k).nSpecies(); kk++) {
+				mmu0 = mu0[kk] + Faraday * surf.thermo(k).electricPotential()*surf.thermo(k).charge(kk);
+				mmu0 -= surf.thermo(0).RT() * surf.thermo(k).logStandardConc(k);
+				std::cout <<"Species: "<< surf.thermo(k).speciesName(kk)
+						<<" : c0 = "<<surf.thermo(k).standardConcentration(kk)<<" : c = "<<surf.thermo(k).concentration(kk)
+						<<" mmu0: "<<mmu0<<" mu0: "<<mu0[kk]<<" mu: "<<mu[kk]<<" h0: "<<h0[kk]*GasConstant*T
+						<<" s0: "<<s0[kk]*GasConstant<<" mu0_calc=h0-T*s0: " <<h0[kk]*GasConstant*T-T*s0[kk]*GasConstant<<std::endl;
+			}
+			std::cout<<std::endl;
+		}
+		// Reaction thermodynamics
+		std::cout<<"Printing reaction thermodynamics..."<<std::endl;
+		vector_fp dG0(surf.nReactions());
+		vector_fp dG(surf.nReactions());
+		vector_fp dH(surf.nReactions());
+		vector_fp dS(surf.nReactions());
+		vector_fp kc(surf.nReactions());
+		vector_fp fdot(surf.nReactions());
+		vector_fp rdot(surf.nReactions());
+		surf.getDeltaSSGibbs(dG0.data());
+		surf.getDeltaGibbs(dG.data());
+		surf.getDeltaEnthalpy(dH.data());
+		surf.getDeltaEntropy(dS.data());
+		surf.getEquilibriumConstants(kc.data());
+		surf.getFwdRateConstants(fdot.data());
+		surf.getRevRateConstants(rdot.data());
+		for (size_t k = 0; k < surf.nReactions(); k++) {
+			std::cout<<"No: "<<k<<" "<<surf.reactionString(k)<<std::endl;
+			std::cout<<"dG(J/kmol)= "<<dG[k]<<" dG0(J/kmol)= "<<dG0[k]<<std::endl;
+			std::cout<<"dH(J/kmol)= "<<dH[k]<<" dS(J/(kmol.K))= "<<dS[k]<<std::endl;
+			std::cout<<"G_cal(J/kmol)=dH-TdS= " <<dH[k]-T*dS[k]<<std::endl;
+			std::cout<<"Keq = " <<kc[k]<<" K_cal=c0P/c0R*exp(-dG/RT)= "<<tp2->standardConcentration(0)/tp1->standardConcentration(0)*(std::exp(-dG[k]/(GasConstant*T)));
+			std::cout<<" K_cal=c0P/c0R*exp(-dG0/RT)= "<<tp2->standardConcentration(0)/tp1->standardConcentration(0)*(std::exp(-dG0[k]/(GasConstant*T)))<<std::endl;
+			std::cout<<std::endl;
+		}
+		vector_fp wdot(surf.nTotalSpecies());
+		surf.getNetProductionRates(wdot.data());
+		std::cout<<"Printing species ROP..."<<std::endl;
+		for (size_t kk = 0; kk < surf.nTotalSpecies(); kk++)
+			std::cout << surf.kineticsSpeciesName(kk)<< " wdot = " << wdot[kk]<< std::endl;
+	} catch (CanteraError& err){
+		std::cout<<err.what()<< std::endl;
 	}
 }

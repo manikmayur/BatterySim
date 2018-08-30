@@ -14,14 +14,9 @@
 
   <!-- phase gas_cathode     -->
   <phase dim="3" id="gas_cathode">
-    <elementArray datasrc="elements.xml">O H N </elementArray>
-    <speciesArray datasrc="gri30.xml#species_data">O2 N2</speciesArray>
+    <elementArray datasrc="elements.xml">O</elementArray>
+    <speciesArray datasrc="gri30.xml#species_data">O2</speciesArray>
     <reactionArray datasrc="#reaction_data"/>
-    <state>
-    	<temperature units="K">298.15</temperature>
-    	<pressure units="Pa">101325.0</pressure>
-    	<moleFractions>O2:1 N2:0.0</moleFractions>
-    </state>
     <thermo model="IdealGas"/>
     <kinetics model="GRI30"/>
     <transport model="Mix"/>
@@ -62,25 +57,18 @@
     <kinetics model="none"/>
   </phase>
 
-  <!-- phase electrolyte     -->
-  <phase dim="3" id="electrolyte">
+  <!-- phase elyte     -->
+  <phase dim="3" id="elyte">
     <elementArray datasrc="elements.xml">C H O Li E F N S</elementArray>
-    <speciesArray datasrc="#species_data">bulk[elyte] Li+[elyte] TFSI-[elyte] O2[elyte] O2-[elyte]</speciesArray>
-    <reactionArray datasrc="#reaction_data">
-      <include max="None" min="None"/>
-    </reactionArray>
+    <speciesArray datasrc="#species_data">DMSO[elyte] Li+[elyte] TFSI-[elyte] O2[elyte] O2-[elyte]</speciesArray>
     <state>
-      <temperature units="K">298.15</temperature>
-      <pressure units="Pa">101325.0</pressure>
-      <moleFractions>bulk[elyte]:0.856112, Li+[elyte]:0.0719348, TFSI-[elyte]:0.0719348, O2[elyte]:1.81276e-5, O2-[elyte]:1e-6</moleFractions>
+      <moleFractions>DMSO[elyte]:0.9, Li+[elyte]:0.75629e-1, TFSI-[elyte]:0.75629e-1, O2[elyte]:0.9075e-4, O2-[elyte]:1.2301e-6</moleFractions>
     </state>
-    <!--<thermo model="Incompressible">
-    	<density units="kg/m3">1216.59</density>
-    </thermo>-->
-    <thermo model="IdealSolidSolution"/>
+    <thermo model="Incompressible">
+      <density units="kg/m3">1217</density>
+    </thermo>
     <transport model="None"/>
     <kinetics model="none"/>
-    <standardConc model="unity"/>
   </phase>
 
   <!-- phase graphite     -->
@@ -111,20 +99,6 @@
     <kinetics model="none"/>
   </phase>
 
-  <!-- phase LiO2     -->
-  <phase dim="3" id="LiO2">
-    <elementArray datasrc="elements.xml">Li O</elementArray>
-    <speciesArray datasrc="#species_data">bulk[LiO2]</speciesArray>
-    <state>
-      <moleFractions>bulk[LiO2]:1.0</moleFractions>
-    </state>
-    <thermo model="Incompressible">
-      <density units="kg/m3">2040</density>
-    </thermo>
-    <transport model="None"/>
-    <kinetics model="none"/>
-  </phase>
-
   <!-- phase lithium     -->
   <phase dim="3" id="lithium">
     <elementArray datasrc="elements.xml">Li</elementArray>
@@ -148,7 +122,7 @@
     </thermo>
     <kinetics model="Interface"/>
     <transport model="None"/>
-    <phaseArray>lithium electrolyte conductor</phaseArray>
+    <phaseArray>lithium elyte conductor</phaseArray>
   </phase>
 
   <!-- phase O_surface     -->
@@ -159,56 +133,30 @@
       <include max="oxygen-1" min="oxygen-1"/>
     </reactionArray>
     <thermo model="Surface">
-      <site_density units="mol/cm2">1e-20</site_density>
+      <site_density units="mol/cm2">2.5e-05</site_density>
     </thermo>
     <kinetics model="Interface"/>
     <transport model="None"/>
-    <phaseArray>gas_cathode electrolyte</phaseArray>
+    <phaseArray>gas_cathode elyte</phaseArray>
   </phase>
 
   <!-- phase C_surface     -->
   <phase dim="2" id="C_surface">
-    <elementArray datasrc="elements.xml">O E</elementArray>
-    <speciesArray datasrc="#species_data">(dummy)</speciesArray>
+    <elementArray datasrc="elements.xml">Li O</elementArray>
+    <speciesArray datasrc="#species_data">[C_surface] LiO2[C_surface] Li2O2[C_surface]</speciesArray>
     <reactionArray datasrc="#reaction_data">
-      <include max="cathode-*" min="cathode-*"/>
+      <include max="c_surf-*" min="c_surf-*"/>
     </reactionArray>
+    <state>
+      <temperature units="K">298.15</temperature>
+      <coverages>[C_surface]:0.99 LiO2[C_surface]:0.005 Li2O2[C_surface]:0.005</coverages>
+    </state>
     <thermo model="Surface">
       <site_density units="mol/cm2">2.5e-05</site_density>
     </thermo>
     <kinetics model="Interface"/>
     <transport model="None"/>
-    <phaseArray>electrolyte conductor</phaseArray>
-  </phase>
-
-  <!-- phase LiO2_precipitation     -->
-  <phase dim="2" id="LiO2_precipitation">
-    <elementArray datasrc="elements.xml"/>
-    <speciesArray datasrc="#species_data">(dummy)</speciesArray>
-    <reactionArray datasrc="#reaction_data">
-      <include max="LiO2-*" min="LiO2-*"/>
-    </reactionArray>
-    <thermo model="Surface">
-      <site_density units="mol/cm2">2.5e-05</site_density>
-    </thermo>
-    <kinetics model="Interface"/>
-    <transport model="None"/>
-    <phaseArray>electrolyte LiO2 conductor</phaseArray>
-  </phase>
-
-  <!-- phase Li2O2_precipitation_surface     -->
-  <phase dim="2" id="Li2O2_precipitation_surface">
-    <elementArray datasrc="elements.xml"/>
-    <speciesArray datasrc="#species_data">(dummy)</speciesArray>
-    <reactionArray datasrc="#reaction_data">
-      <include max="cathode2-*" min="cathode2-*"/>
-    </reactionArray>
-    <thermo model="Surface">
-      <site_density units="mol/cm2">2.5e-05</site_density>
-    </thermo>
-    <kinetics model="Interface"/>
-    <transport model="None"/>
-    <phaseArray>LiO2 electrolyte Li2O2</phaseArray>
+    <phaseArray>elyte conductor</phaseArray>
   </phase>
 
   <!-- phase Li2O2_precipitation_from_solution     -->
@@ -223,7 +171,7 @@
     </thermo>
     <kinetics model="Interface"/>
     <transport model="None"/>
-    <phaseArray>electrolyte Li2O2</phaseArray>
+    <phaseArray>elyte Li2O2</phaseArray>
   </phase>
 
   <!-- phase TPB_Li2O2     -->
@@ -238,7 +186,7 @@
     </thermo>
     <kinetics model="Edge"/>
     <transport model="None"/>
-    <phaseArray>Li2O2 electrolyte conductor</phaseArray>
+    <phaseArray>Li2O2 elyte conductor</phaseArray>
   </phase>
 
   <!-- phase Li2O2_surface_RM     -->
@@ -253,7 +201,7 @@
     </thermo>
     <kinetics model="Interface"/>
     <transport model="None"/>
-    <phaseArray>electrolyte Li2O2 conductor</phaseArray>
+    <phaseArray>elyte Li2O2 conductor</phaseArray>
   </phase>
 
   <!-- species definitions     -->
@@ -286,8 +234,8 @@
       </thermo>
     </species>
 
-    <!-- species bulk[elyte]    -->
-    <species name="bulk[elyte]">
+    <!-- species DMSO[elyte]    -->
+    <species name="DMSO[elyte]">
       <atomArray>H:6 C:2 S:1 O:1 </atomArray>
       <thermo>
         <const_cp Tmax="5000.0" Tmin="100.0">
@@ -297,9 +245,6 @@
            <cp0 units="J/kmol/K">0.0</cp0>
         </const_cp>
       </thermo>
-      <standardState model="constant_incompressible">
-        <molarVolume units="cm3/gmol">71.027</molarVolume>
-      </standardState>
     </species>
 
     <!-- species O2[elyte]    -->
@@ -308,15 +253,11 @@
       <thermo>
         <const_cp Tmax="5000.0" Tmin="100.0">
            <t0 units="K">298.15</t0>
-           <!--<h0 units="kJ/mol">-37.9683</h0>-->
-           <h0 units="kJ/mol">-7.9943</h0>
+           <h0 units="kJ/mol">0</h0>
            <s0 units="J/mol/K">0</s0>
            <cp0 units="J/kmol/K">0.0</cp0>
         </const_cp>
       </thermo>
-      <standardState model="constant_incompressible">
-        <molarVolume units="cm3/gmol">31</molarVolume>
-      </standardState>
     </species>
 
     <!-- species O2-[elyte]    -->
@@ -326,14 +267,11 @@
       <thermo>
         <const_cp Tmax="5000.0" Tmin="100.0">
            <t0 units="K">298.15</t0>
-           <h0 units="kJ/mol">-22.84</h0>
+           <h0 units="kJ/mol">-34.95</h0>
            <s0 units="J/mol/K">0</s0>
            <cp0 units="J/kmol/K">0.0</cp0>
         </const_cp>
       </thermo>
-      <standardState model="constant_incompressible">
-        <molarVolume units="cm3/gmol">31</molarVolume>
-      </standardState>
     </species>
 
     <!-- species Li+[elyte]    -->
@@ -348,9 +286,6 @@
            <cp0 units="J/kmol/K">0.0</cp0>
         </const_cp>
       </thermo>
-      <standardState model="constant_incompressible">
-        <molarVolume units="cm3/gmol">13.02</molarVolume>
-      </standardState>
     </species>
 
     <!-- species TFSI-[elyte]    -->
@@ -365,9 +300,6 @@
            <cp0 units="J/kmol/K">0.0</cp0>
         </const_cp>
       </thermo>
-      <standardState model="constant_incompressible">
-        <molarVolume units="cm3/gmol">142</molarVolume>
-      </standardState>
     </species>
 
     <!-- species bulk[carbon]    -->
@@ -396,19 +328,6 @@
       </thermo>
     </species>
 
-    <!-- species bulk[LiO2]    -->
-    <species name="bulk[LiO2]">
-      <atomArray>O:2 Li:1 </atomArray>
-      <thermo>
-        <const_cp Tmax="5000.0" Tmin="100.0">
-           <t0 units="K">298.15</t0>
-           <h0 units="kJ/mol">-380</h0>
-           <s0 units="J/mol/K">0.0</s0>
-           <cp0 units="J/kmol/K">0.0</cp0>
-        </const_cp>
-      </thermo>
-    </species>
-
     <!-- species Li    -->
     <species name="Li">
       <atomArray>Li:1 </atomArray>
@@ -421,16 +340,55 @@
         </const_cp>
       </thermo>
     </species>
+
+    <!-- species [C_surface]    -->
+    <species name="[C_surface]">
+      <atomArray/>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">0.0</h0>
+           <s0 units="J/mol/K">0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+
+    <!-- species LiO2[C_surface]    -->
+    <species name="LiO2[C_surface]">
+      <atomArray>O:2 Li:1 </atomArray>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">-160.95</h0>
+           <s0 units="J/mol/K">0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+
+    <!-- species Li2O2[C_surface]    -->
+    <species name="Li2O2[C_surface]">
+      <atomArray>O:2 Li:2 </atomArray>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">-649</h0>
+           <s0 units="J/mol/K">0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
   </speciesData>
   <reactionData id="reaction_data">
 
     <!-- reaction lithium-1    -->
     <reaction reversible="yes" type="edge" id="lithium-1">
       <equation>Li [=] Li+[elyte] + electron</equation>
-      <rateCoeff>
+      <rateCoeff type="exchangecurrentdensity">
         <electrochem beta="0.5"/>
         <Arrhenius>
-           <A>1.000000E+20</A>
+           <A>1.000000E+10</A>
            <b>0.0</b>
            <E units="kJ/mol">0.000001</E>
         </Arrhenius>
@@ -453,25 +411,24 @@
       <products>O2[elyte]:1.0</products>
     </reaction>
 
-    <!-- reaction cathode-1    -->
-    <reaction reversible="yes" type="edge" id="cathode-1">
-      <equation>O2[elyte] + electron [=] O2-[elyte]</equation>
-      <!--<rateCoeff>-->
+    <!-- reaction c_surf-1    -->
+    <reaction reversible="no" type="edge" id="c_surf-1">
+      <equation>Li+[elyte] + O2[elyte] + electron + [C_surface] =] LiO2[C_surface]</equation>
       <rateCoeff type="exchangecurrentdensity">
         <electrochem beta="0.5"/>
         <Arrhenius>
-           <A>2.000000E-12</A>
+           <A>1.000000E-20</A>
            <b>0.0</b>
            <E units="kJ/mol">0.000001</E>
         </Arrhenius>
       </rateCoeff>
-      <reactants>electron:1 O2[elyte]:1.0</reactants>
-      <products>O2-[elyte]:1.0</products>
+      <reactants>[C_surface]:1 electron:1 Li+[elyte]:1.0 O2[elyte]:1</reactants>
+      <products>LiO2[C_surface]:1.0</products>
     </reaction>
 
-    <!-- reaction LiO2-1    -->
-    <reaction reversible="no" type="surface" id="LiO2-1">
-      <equation>Li+[elyte] + O2-[elyte] =] bulk[LiO2]</equation>
+    <!-- reaction c_surf-2    -->
+    <reaction reversible="yes" type="surface" id="c_surf-2">
+      <equation>Li+[elyte] + O2-[elyte] + [C_surface] [=] LiO2[C_surface]</equation>
       <rateCoeff>
         <Arrhenius>
            <A>1.000000E+00</A>
@@ -479,13 +436,13 @@
            <E units="kJ/mol">0.000000</E>
         </Arrhenius>
       </rateCoeff>
-      <reactants>Li+[elyte]:1.0 O2-[elyte]:1</reactants>
-      <products>bulk[LiO2]:1.0</products>
+      <reactants>[C_surface]:1 Li+[elyte]:1.0 O2-[elyte]:1</reactants>
+      <products>LiO2[C_surface]:1.0</products>
     </reaction>
 
-    <!-- reaction cathode2-1    -->
-    <reaction reversible="no" type="surface" id="cathode2-1">
-      <equation>2 bulk[LiO2] =] O2[elyte] + bulk[Li2O2]</equation>
+    <!-- reaction c_surf-3    -->
+    <reaction reversible="no" type="surface" id="c_surf-3">
+      <equation>2 LiO2[C_surface] =] Li2O2[C_surface] + [C_surface] + O2[elyte]</equation>
       <rateCoeff>
         <Arrhenius>
            <A>1.000000E-12</A>
@@ -493,8 +450,8 @@
            <E units="kJ/mol">0.000000</E>
         </Arrhenius>
       </rateCoeff>
-      <reactants>bulk[LiO2]:2.0</reactants>
-      <products>O2[elyte]:1.0 bulk[Li2O2]:1</products>
+      <reactants>LiO2[C_surface]:2.0</reactants>
+      <products>[C_surface]:1 Li2O2[C_surface]:1.0 O2[elyte]:1</products>
     </reaction>
 
     <!-- reaction cathode3-1    -->
@@ -513,17 +470,17 @@
 
     <!-- reaction Li2O2_edge-1    -->
     <reaction reversible="yes" type="edge" id="Li2O2_edge-1">
-      <equation>bulk[Li2O2] [=] 2 Li+[elyte] + O2[elyte] + 2 electron </equation>
-      <rateCoeff>
+      <equation>2 Li+[elyte] + O2[elyte] + 2 electron [=] bulk[Li2O2]</equation>
+      <rateCoeff type="exchangecurrentdensity">
         <electrochem beta="0.5"/>
         <Arrhenius>
-           <A>1.000000E-39</A>
+           <A>1.000000E-25</A>
            <b>0.0</b>
            <E units="kJ/mol">0.000001</E>
         </Arrhenius>
       </rateCoeff>
-      <reactants>bulk[Li2O2]:1.0</reactants>
-      <products>electron:2.0 Li+[elyte]:2.0 O2[elyte]:1</products>
+      <reactants>electron:2.0 Li+[elyte]:2.0 O2[elyte]:1</reactants>
+      <products>bulk[Li2O2]:1.0</products>
     </reaction>
   </reactionData>
 </ctml>

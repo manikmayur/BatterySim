@@ -1,0 +1,5 @@
+digraph reaction_paths {
+center=1;size="6,9";ratio=auto
+ label = "Scale = 0\l time = 0 (s)";
+ fontname = "Helvetica";
+}
