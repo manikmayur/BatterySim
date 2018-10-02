@@ -6,7 +6,73 @@
 # and Neidhardt, cp. J. P. Neidhardt, D. N. Fronczek, T. Jahnke, T. Danner, B. Horstmann, and W. G. Bessler, J. Electrochem. Soc. 159, A1528-A1542 (2012)
 # Cell geometry and chemical parameters adjusted to experimental cells from ZSW in the scope of LiBaLu project 2017
 #
+# MULTI-STEP reaction mechanism
+# 6 OPTIONS implemented:
+# A: REVERSIBLE REACTION MECHANISM
+# B: IRREVERSIBLE REACTION MECHANISM
+# C: IRREVERSIBLE REACTION MECHANISM WITH REDOX MEDIATOR
+# D: IRREVERSIBLE REACTION MECHANISM with solution-mediated mechanisms (LiBaLu 2017)
+# E: SIMPLE ONE-STEP REACTION MECHANISM FOR MODEL TESTING
+# F: PARALLEL REACTION MECHANISMS: B AND D! in work --- not stable/working
+#
+# Adjust relevant parameters in MODEL TYPES in this model file AND
+# Switch between the reaction mechanism in section SURFACES AND REACTIONS in the cti-file
+# MODEL TYPE IS F - in work!!!!
+#
+# Simulation stability information: Discharge: use ramps for i from 0 to I_max and from I_max to -I_max for charge
+#
 #########################################################################
+
+#Reaction Numbering  - the implementation is in section SURFACES AND REACTIONS of this file
+
+# A: REVERSIBLE REACTION MECHANISM:
+# active reactions: 0,1,2,3b and 4b
+
+# B: IRREVERSIBLE REACTION MECHANISM:
+# active reactions: 0,1,2,3,4,5
+
+# C: IRREVERSIBLE REACTION MECHANISM WITH REDOX MEDIATOR:
+# active reactions: 0,1,2,3,4,5,6,7
+
+# D: IRREVERSIBLE REACTION MECHANISM: solution-mediated mechanisms:
+# Direct disproportionation of Li+[elyte] and O2-[elyte]
+# active reactions: 0,1,2,4c,5
+
+# E: simple one-step reaction mechanism for testing purpose
+# active reactions: 0,1,2b
+
+# F: PARALLEL REACTION MECHANISMS:
+# active reactions: 0,1,2,4c,5 + 3,4
+
+
+#Reactions 0 - 2 are always needed:
+
+# No 0: Li metal anode reaction
+
+#No 1: O2 dissolution at gas/electrolyte interface
+
+#No 2: Charge transfer reaction on carbon surface
+
+
+#Reactions 3 - 7: to be switched on according to model type
+
+#No 3: LiO2 precipitation (irreversible mechanism)
+
+#No 3b: LiO2 precipitation (reversible mechanism)
+
+#No 4: irreversible LiO2 disproportionation forming Li2O2
+
+#No 4b: reversible LiO2 disproportionation forming Li2O2
+
+#No 4c: direct disproportionation of Li2O2 from solution
+
+#No 5: Li2O2 electrostripping
+
+#Redox mediator reactions:
+#No 6: redox mediated dissolution of Li2O2
+
+#No 7: redox reaction on carbon surface
+
 
 #######################   UNITS     ####################################
 
@@ -18,6 +84,7 @@ units(length = "m", time = "s", quantity = "kmol", act_energy = "kJ/mol")
 #---- DUMMY ----
 #---------------
 
+
 # Anode
 # ------------------------------------------------------------------------------------
 ideal_gas(
@@ -28,8 +95,10 @@ ideal_gas(
     kinetics  = "GRI30",
     transport = "Mix")
 
+	  
 # Cathode
 # ------------------------------------------------------------------------------------
+
 ideal_gas(
     name      = "gas_cathode",  #this name MUST NOT be changed, DENIS relies on it
     elements  = " O H N ",
@@ -50,19 +119,19 @@ ideal_gas(
     reactions     = "NONE",
     kinetics      = "NONE",
     transport     = "NONE",
-    initial_state = state(pressure = OneAtm, mole_fractions = ''))
+    initial_state = state( pressure = OneAtm, mole_fractions = ''))
 
 species(
     name   = "(dummy)",#
     atoms  = "",
     thermo = const_cp(h0 = (0.0, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))
 
-metal(
+incompressible_solid(
 	name          = "conductor",
 	elements      = "E", 
 	species       = "electron",
 	density       = (1,'kg/m3'),
-	initial_state = state(mole_fractions = 'electron:1.0' ))
+	initial_state = state( mole_fractions = 'electron:1.0' ))
 
 species(
 	name   = "electron",
@@ -83,52 +152,42 @@ species(
 #     initial_state 	= state(mole_fractions = 'Li+[elyte]:0.7143e-1, TFSI-[elyte]:0.7143e-1, O2[elyte]:1e-15, O2-[elyte]:1e-30, DMSO[elyte]:0.8572, LiO2[elyte]:1e-15'))
 
 # Electrolyte 1M LiTFSI in DMSO
-IdealSolidSolution(
-#incompressible_solid(
+incompressible_solid(
 	name          = "elyte",
 	elements      = "C H O Li E F N S",
 	species       = "DMSO[elyte] Li+[elyte] TFSI-[elyte] O2[elyte] O2-[elyte]",
-    #density       = (1217, 'kg/m3'),   # Density of 1M LiTFSI in DMSO at 22°C; Gittleson Energy & Environmental Science 10, 1167–1179 (2017).
-    initial_state = state(mole_fractions = 'DMSO[elyte]:0.85495, Li+[elyte]:0.07245, TFSI-[elyte]:0.07245, O2[elyte]:1.44482e-04, O2-[elyte]:7.24533e-10'),
-    #initial_state = state(mole_fractions = 'DMSO[elyte]:0.9, Li+[elyte]:0.75629e-1, TFSI-[elyte]:0.75629e-1, O2[elyte]:0.9075e-4, O2-[elyte]:1.2301e-6'),
-    standard_concentration = "unity"
-    )
+    density       = (1217, 'kg/m3'),   # Density of 1M LiTFSI in DMSO at 22°C; Gittleson Energy & Environmental Science 10, 1167–1179 (2017).
+    initial_state = state(mole_fractions = 'DMSO[elyte]:0.9, Li+[elyte]:0.75629e-1, TFSI-[elyte]:0.75629e-1, O2[elyte]:0.9075e-4, O2-[elyte]:1.2301e-6'))  #O2 conc 1.2 mM from Gittleson Energy & Environmental Science 10, 1167–1179 (2017).
 
 species(
 	name   = "DMSO[elyte]",
 	atoms  = "C:2, H:6, O:1, S:1",
-	thermo = const_cp(h0 = (0.0, 'kJ/mol'), s0 = (0.0, 'J/mol/K')),
-	standardState = constantIncompressible(molarVolume = (76.3589, 'cm3/gmol')),
-	)       # non reactive species
- 
+	thermo = const_cp(h0 = (0.0, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))       # non reactive species
+
 species(
 	name   = "O2[elyte]",
 	atoms  = "O:2",
     #thermo = const_cp(h0 = (-39.50308, 'kJ/mol'), s0 = (0, 'J/mol/K')))      # Fitted to O2 solubility of 2.1 mM/L (Uni Bonn 2.5 mM/L in pure DMSO - unpublished paper) in DMSO Sawyer et Tsuchiya: Effects of media and electrode materials on the electrochemical reduction of dioxygen
-    thermo = const_cp(h0 = (-37.9683, 'kJ/mol'), s0 = (0, 'J/mol/K')),
-    standardState = constantIncompressible(molarVolume = (9.4, 'cm3/gmol'))
-    )      # Fitted to O2 solubility of 1.2 mM/L for 1M LiTFSI in DMSO at 22°C; Gittleson Energy & Environmental Science 10, 1167–1179 (2017).
+    thermo = const_cp(h0 = (-37.9683, 'kJ/mol'), s0 = (0, 'J/mol/K')))      # Fitted to O2 solubility of 1.2 mM/L for 1M LiTFSI in DMSO at 22°C; Gittleson Energy & Environmental Science 10, 1167–1179 (2017).
 
 species(
 	name   = "O2-[elyte]",
 	atoms  = "O:2 E:1",
-    thermo = const_cp(h0 = (-34.95, 'kJ/mol'), s0 = (0, 'J/mol/K')),
-    standardState = constantIncompressible(molarVolume = (9.4, 'cm3/gmol'))
-    )    # fitted to deltaG of -20 kJ/mol for reaction Li+[elyte] + O2-[elyte] <-> LiO2[surf] from Johnson, L.; Li, C.; Liu, Z.; Chen, Y.; Freunberger, S. A.; Ashok, P. C.; Praveen, B. B.; Dholakia, K.; Tarascon, J.-M.; Bruce, P. G. Nat. Chem. 2014, 6, 1091-1099.
+    #thermo = const_cp(h0 = (-22.835, 'kJ/mol'), s0 = (0, 'J/mol/K')))    # fitted to solubility of 40umol/l from Johnson, L.; Li, C.; Liu, Z.; Chen, Y.; Freunberger, S. A.; Ashok, P. C.; Praveen, B. B.; Dholakia, K.; Tarascon, J.-M.; Bruce, P. G. Nat. Chem. 2014, 6, 1091-1099.
+    #thermo = const_cp(h0 = (-41.5, 'kJ/mol'), s0 = (0, 'J/mol/K')))    # fitted to deltaG of -20 kJ/mol for raction Li+[elyte] + O2-[elyte] <-> LiO2[surf] from Johnson, L.; Li, C.; Liu, Z.; Chen, Y.; Freunberger, S. A.; Ashok, P. C.; Praveen, B. B.; Dholakia, K.; Tarascon, J.-M.; Bruce, P. G. Nat. Chem. 2014, 6, 1091-1099.
+    #thermo 	= const_cp(h0 = (15, 'kJ/mol'), s0 = (0, 'J/mol/K')))    #OCV Fit ZSW:
+    #thermo = const_cp(h0 = (-13, 'kJ/mol'), s0 = (0, 'J/mol/K')))    # fitted to deltaG of -20 kJ/mol for raction Li+[elyte] + O2-[elyte] <-> LiO2[surf] from Johnson, L.; Li, C.; Liu, Z.; Chen, Y.; Freunberger, S. A.; Ashok, P. C.; Praveen, B. B.; Dholakia, K.; Tarascon, J.-M.; Bruce, P. G. Nat. Chem. 2014, 6, 1091-1099.
+    thermo = const_cp(h0 = (-34.95, 'kJ/mol'), s0 = (0, 'J/mol/K')))    # fitted to deltaG of -20 kJ/mol for raction Li+[elyte] + O2-[elyte] <-> LiO2[surf] from Johnson, L.; Li, C.; Liu, Z.; Chen, Y.; Freunberger, S. A.; Ashok, P. C.; Praveen, B. B.; Dholakia, K.; Tarascon, J.-M.; Bruce, P. G. Nat. Chem. 2014, 6, 1091-1099.
 
 species(
 	name   = "Li+[elyte]",
 	atoms  = "Li:1, E:-1",
-    thermo = const_cp(h0 = (-278.49,'kJ/mol'), s0 = (13.4, 'J/mol/K')),
-    standardState = constantIncompressible(molarVolume = (-4, 'cm3/gmol'))
-    )      # Li+(aq) from Atkins, P. W. Physikalische Chemie. 4., vollst. ueberarb. Aufl. - Weinheim : Wiley-VCH (2006)
+    thermo = const_cp(h0 = (-278.49,'kJ/mol'), s0 = (13.4, 'J/mol/K')))      # Li+(aq) from Atkins, P. W. Physikalische Chemie. 4., vollst. ueberarb. Aufl. - Weinheim : Wiley-VCH (2006)
 
 species(
 	name   = "TFSI-[elyte]",
 	atoms  = "C:2, F:6, N:1, O:4, S:2, E:1",
-	thermo = const_cp(h0 = (0.0, 'kJ/mol'), s0 = (0.0, 'J/mol/K')),
-	standardState = constantIncompressible(molarVolume = (148.2, 'cm3/gmol'))
-	)
+	thermo = const_cp(h0 = (0.0, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))
 
 #---------------------
 #---- Cathode ----
@@ -146,22 +205,35 @@ species(
 	atoms  = "C:1",
 	thermo = const_cp(cp0 = (0, 'J/mol/K'), h0 = (0, 'kJ/mol'), s0 = (5.740, 'J/mol/K')))   # non reactive phase, values for graphite from from Atkins, P. W. Physikalische Chemie. 4., vollst. ueberarb. Aufl., Weinheim, Wiley-VCH (2006)
 
-stoichiometric_solid(
-#incompressible_solid(
+incompressible_solid(
 	name          = "Li2O2",
 	elements      = "Li O",
 	species       = "bulk[Li2O2]",
 	density       = (2310, 'kg/m3'),         # W.M. Haynes, D.R. Lide, T.J. Bruno, CRC Handbook of Chemistry and Physics: A Ready-reference Book of Chemical and Physical Data 2013-2014, 94th edition, CRC Press (2013)
-	initial_state = state(mole_fractions = 'bulk[Li2O2]:1.0' ))
+	initial_state = state( mole_fractions = 'bulk[Li2O2]:1.0' ))
 
 species(
 	name   = "bulk[Li2O2]",
 	atoms  = "Li:2, O:2",
 	thermo = const_cp(h0 = (-649, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))        #calculated value: -649 kJ/mol to reach deltaG from -570.8 kJ/mol for reaction "2 Li + 2 O2(g) <-> Li2O2 + O2(g)"   from C. L. Bender, P. Hartmann, M. Vracar, P. Adelhelm, and J. Janek, Adv. Energy Mater. 4, (2014).
         #thermo 		= const_cp(h0 = (-600, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))        #calculated value: -649 kJ/mol to reach deltaG from -570.8 kJ/mol for reaction "2 Li + 2 O2(g) <-> Li2O2 + O2(g)"   from C. L. Bender, P. Hartmann, M. Vracar, P. Adelhelm, and J. Janek, Adv. Energy Mater. 4, (2014).
-                              
+
+incompressible_solid(
+	name 		  = "LiO2",
+	elements 	  = "Li O",
+	species       = "bulk[LiO2]",
+	density       = (2040, 'kg/m3'),        # Assumed
+	initial_state = state( mole_fractions = 'bulk[LiO2]:1.0' ))
+
+species(
+	name   = "bulk[LiO2]",
+	atoms  = "Li:1, O:2",
+	thermo = const_cp(h0 = (-380, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))        #TESTING PARALLEL REACTIONS -> TO BE CHANGED!!!
+	#thermo = const_cp(h0 = (1, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))
+	#thermo = const_cp(h0 = (-307.85, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))        #calculated value: -307.85 kJ/mol to reach deltaG from -474.9 kJ/mol for reaction "2 Li + 2 O2(g) <-> 2 LiO2"  from C. L. Bender, P. Hartmann, M. Vracar, P. Adelhelm, and J. Janek, Adv. Energy Mater. 4, (2014).
+                               
 #-----------------------
-#---- LITHIUM-Anode ----
+#---- LIHTIUM-Anode ----
 #-----------------------
 incompressible_solid(
 	name 	 = "lithium",
@@ -203,7 +275,7 @@ ideal_interface(
 	species      = "(dummy)",
 	reactions	 = "oxygen-1",
 	site_density = (2.50e-5,'mol/cm2'),
-	phases       = "elyte gas_cathode")
+	phases       = "gas_cathode elyte")
 
 # No 1: O2 dissolution at gas/electrolyte interface
 surface_reaction("O2 <=> O2[elyte]", [5e9, 0.0, (0, 'kJ/mol')], id="oxygen-1")  #set fast
@@ -213,42 +285,43 @@ surface_reaction("O2 <=> O2[elyte]", [5e9, 0.0, (0, 'kJ/mol')], id="oxygen-1")  
 #-------------------------
 
 ideal_interface(
-	name          = "C_surface",
-	elements      = "Li O",
-    species       = "[C_surface] LiO2[C_surface] Li2O2[C_surface]",
-    reactions     = "c_surf-*",
-	site_density  = (0.1,'mol/cm2'),
-	#site_density  = (2.50e-5,'mol/cm2'),
-    phases        = "elyte conductor",
-    initial_state = state(temperature = 298.15,
-                        coverages = '[C_surface]:0.99 LiO2[C_surface]:0.005 Li2O2[C_surface]:0.005'))
+	name 		 = "C_surface",
+	elements 	 = " ",
+    species      = "(dummy)",
+	reactions	 = "cathode-*",
+	site_density = (2.50e-5,'mol/cm2'),
+	phases       = "elyte LiO2 Li2O2 conductor")
 
-species(
-	name   = "[C_surface]",
-	atoms  = "",
-    thermo = const_cp(h0 = (0.0, 'kJ/mol'), s0 = (0, 'J/mol/K'))) #TESTING SURFACE SPECIES -> TO BE CHANGED!!!
+# No 3a: charge transfer reaction on carbon surface
+edge_reaction("O2[elyte] + electron <=> O2-[elyte]", [1e1, 0.0, (1e-6, 'kJ/mol')], rateCoeff='exchangecurrentdensity', beta = 0.5, id="cathode-1") #  Fitted to match experimental discharge potential at 0.1 mA/cm2
 
-species(
-	name   = "LiO2[C_surface]",
-	atoms  = "Li:1, O:2",
-    thermo = const_cp(h0 = (-160.95, 'kJ/mol'), s0 = (0, 'J/mol/K'))) #TESTING SURFACE SPECIES -> TO BE CHANGED!!!
-    #thermo = const_cp(h0 = (-380, 'kJ/mol'), s0 = (0, 'J/mol/K')))  #dH0(298.15K) = 632.62+/-8.4 kJ/mol, dS0(298.15K) = 56.484+/- 
-	
-species(
-	name   = "Li2O2[C_surface]",
-	atoms  = "Li:2, O:2",
-    thermo = const_cp(h0 = (-649, 'kJ/mol'), s0 = (0, 'J/mol/K'))) #TESTING SURFACE SPECIES -> TO BE CHANGED!!!
-	
-# No 2a: Oxygen reduction on carbon surface with Li+ (High Li+)
-#edge_reaction("O2[elyte] + electron => O2-[elyte]", [1e-20, 0.0, (1e-6, 'kJ/mol')], rateCoeff='exchangecurrentdensity', beta = 0.5, id="c_surf-1")
-#edge_reaction("Li+[elyte] + O2[elyte] + electron + [C_surface] => LiO2[C_surface]", [1e-20, 0.0, (1e-6, 'kJ/mol')], rateCoeff='exchangecurrentdensity', beta = 0.5, id="c_surf-1")
-edge_reaction("2 Li+[elyte] + O2[elyte] + 2 electron + [C_surface] => Li2O2[C_surface]", [1e-20, 0.0, (1e-6, 'kJ/mol')], rateCoeff='exchangecurrentdensity', beta = 0.5, id="c_surf-1")
+# No 2c: parallel reaction pathway to reaction No 4 (surface-mediated reaction mechanism): Second oxidation step of O2- forming Li2O2 on carbon surface
+#edge_reaction("O2-[elyte] + 2 Li+[elyte] + electron <=> bulk[Li2O2]", [4e-22, 0.0, (1e-6, 'kJ/mol')], beta = 0.5, id="cathode-2") #  parallel reaction pathway (surface-mediated reaction mechanism)
 
-# No 3: LiO2 solvation equilibrium 
-surface_reaction("Li+[elyte] + O2-[elyte] + [C_surface] <=> LiO2[C_surface]", [1e0, 0.0, (0, 'kJ/mol')], id="c_surf-2")
+ideal_interface(
+	name         = "LiO2_precipitation",
+	elements     = " ",
+	species      = "(dummy)",
+	reactions    = "LiO2-*",
+	site_density = (2.50e-5,'mol/cm2'),
+	phases       = "elyte LiO2 conductor")
 
-# No 4a: Surface disproportion of LiO2
-surface_reaction("2 LiO2[C_surface] => Li2O2[C_surface] + [C_surface] + O2[elyte]", [1e-12, 0.0, (0, 'kJ/mol')], id="c_surf-3")
+# No 3bb: Precipitation of LiO2 (irreversible mechanism) - surface mechanism
+surface_reaction("Li+[elyte] + O2-[elyte] => bulk[LiO2]", [1e0, 0.0, (0, 'kJ/mol')], id="LiO2-1")
+
+#No 3b: Precipitation of LiO2 (reversible mechanism)
+#surface_reaction("Li+[elyte] + O2-[elyte] <=> bulk[LiO2]", [1.065, 0.0, (1e-6, 'kJ/mol')], id="LiO2-2")
+
+ideal_interface(
+	name 		 = "Li2O2_precipitation_surface",
+	elements 	 = " ",
+	species      = "(dummy)",
+	reactions	 = "cathode2-*",
+	site_density = (2.50e-5,'mol/cm2'),
+	phases       = "LiO2 elyte Li2O2")
+
+# No 4b: irreversible Chemical disproportionation of LiO2 bulk - surface mechanism
+surface_reaction("2 bulk[LiO2] => O2[elyte] + bulk[Li2O2]", [1e-12, 0.0, (0, 'kJ/mol')], id="cathode2-1")           #5e-14
 
 ideal_interface(
 	name 		 = "Li2O2_precipitation_from_solution",
@@ -271,7 +344,7 @@ edge(
 
 # No 5: electrostripping of Li2O2
 #Anomalie mit U-Dip bei Entladebeginn: edge_reaction("bulk[Li2O2] <=> 2 electron + 2 Li+[elyte] + O2[elyte]", [5e-23, 0.0, (1e-6, 'kJ/mol')], beta = 0.5, id="Li2O2_edge-2")
-edge_reaction("2 Li+[elyte] + O2[elyte] + 2 electron <=> bulk[Li2O2]", [1e-25, 0.0, (1e-6, 'kJ/mol')], rateCoeff='exchangecurrentdensity', beta = 0.5, id="Li2O2_edge-1")
+edge_reaction("bulk[Li2O2] <=> 2 Li+[elyte] + O2[elyte] + 2 electron ", [1e-25, 0.0, (1e-6, 'kJ/mol')], rateCoeff='exchangecurrentdensity', beta = 0.5, id="Li2O2_edge-1")
 
 ideal_interface(
 	name 		 = "Li2O2_surface_RM",
@@ -280,10 +353,3 @@ ideal_interface(
 	reactions    = "redox-*",
 	site_density = (2.50e-5,'mol/cm2'),
 	phases       = "elyte Li2O2 conductor")
-
-#SWITCH ON FOR REDOX MEDIATOR redox mediator reaction
-#No 6: redox mediated Li2O2 dissolution
-#edge_reaction("2 Ferrocene+[elyte] + bulk[Li2O2] <=> 2 Ferrocene[elyte] + 2 Li+[elyte] + O2[elyte]", [1.25e-7, 0.0, (0, 'kJ/mol')], beta = 0.5, id="redox-1")
-
-#No 7: TEMPO+ formation at carbon surface
-#edge_reaction("Ferrocene[elyte] <=> Ferrocene+[elyte] + electron", [9e-11, 0.0, (1e-6, 'kJ/mol')], beta = 0.5, id="cathode-2")  # kinetics fitted to cyclic voltammetry - B. J. Bergner, A. Schuermann, K. Peppler, A. Garsuch, and J. Janek, J. Am. Chem. Soc. 136, 15054-15064 (2014)

@@ -6,9 +6,11 @@
 // Description : Hello World in C++, Ansi-style
 //============================================================================
 
+#include <iostream>
+#include <string>
+#include <sstream>
 #include "cantera/thermo/ConstDensityTabulatedThermo.h"
 #include "cantera/thermo/IdealSolidSolnPhaseTabulatedThermo.h"
-#include <iostream>
 #include "cantera/thermo/ThermoFactory.h"
 #include "cantera/thermo/ThermoPhase.h"
 #include "cantera/Interface.h"
@@ -16,7 +18,7 @@
 #include "cantera/kinetics/importKinetics.h"
 #include "cantera/Edge.h"
 #include "cantera/reactionpaths.h"
-#include <string>
+
 
 using namespace Cantera;
 
@@ -28,11 +30,13 @@ void writeRxnPathDiagram(double time, ReactionPathBuilder& b,
 		Kinetics& reaction, std::ostream& logfile, std::ostream& outfile);
 void thermoTestSPM(std::string inFile);
 void thermoInitReactionROP_demo(std::string inFile);
+void printThermoReactionO2(std::string inFile);
 
 int main() {
 	std::string inFile;
 	std::cout<<"Testing Cantera"<<std::endl;
-	inFile = "cantera\\Work_LiO2_organic_LiBaLu_November_1M_parallel_reactions_inwork.cti";
+	inFile = "cantera\\Work_LiO2_organic_LiBaLu_November_1M_parallel_reactions.cti";
+	//inFile = "cantera\\Work_LiO2_organic_LiBaLu_November_1M_parallel_reactions_inwork.cti";
 	//inFile = "cantera\\Intercalation_LCO_Graphite.xml";
 	//inFile = "Final_Kupper_2016_JElectrochemSoc_LFP_C6_revised.xml";
 	try {
@@ -41,7 +45,8 @@ int main() {
 		//thermoInitRefdemo(inFile);
 		//thermoInitCathodeROP_demo(inFile);
 		//thermoTestSPM(inFile);
-		thermoInitReactionROP_demo(inFile);
+		//thermoInitReactionROP_demo(inFile);
+		printThermoReactionO2(inFile);
 		//thermoInitElectrolyte_demo(inFile);
 		//simple_demo2();
 	}
@@ -103,12 +108,6 @@ void printData(ThermoPhase* tp) {
 	vector_fp G(tp->nSpecies());
 	vector_fp H(tp->nSpecies());
 	vector_fp S(tp->nSpecies());
-	/* Cantera 2.2
-	tp->getMoleFractions(DATA_PTR(Xo));
-	tp->getGibbs_RT(DATA_PTR(G));
-	tp->getEnthalpy_RT(DATA_PTR(H));
-	tp->getEntropy_R(DATA_PTR(S));
-	 */
 	tp->getMoleFractions(Xo.data());
 	tp->getGibbs_RT(G.data());
 	tp->getEnthalpy_RT(H.data());
@@ -183,9 +182,9 @@ void thermoInitCathodeROP_demo(std::string inFile) {
 			tm = i*dt;
 			sim.advance(tm);
 			writeRxnPathDiagram(tm, b, gas, rplog, rplot);
-		}*/
+		}
 
-		//}
+		//}*/
 	} catch (CanteraError& err){
 		std::cout<<err.what()<< std::endl;
 	}
@@ -272,16 +271,7 @@ void thermoInitAnodeROP_demo(std::string inFile) {
 	std::cout<<"dG0= "<< dG0[0] <<" dH0= "<< dH0[0] <<" dS0= "<< dS0[0] << std::endl;
 	std::cout<<"dG= " << dG[0] << " dH= "<< dH[0] <<" dS= "<< dS[0] << std::endl;
 	std::cout<<"dGc= "<< dH[0] - T*dS[0] << " Ec=" << -dG[0]/96485e3 << " E0=" << -dG0[0]/96485e3 << std::endl;
-	/*
-	for (size_t n = 0; n < surf.nPhases(); n++) {
-		std::cout<< "Name: " << surf.thermo(n).id()<< " dS: " << surf.thermo(n).getPartialMolarEntropies() << std::endl;
-	}
-	for (size_t k = 0; k < tp1->nSpecies(); k++) {
-		std::cout<< tp1->speciesName(k) <<" wdot = " << wdot[k] << std::endl;
-	}
-	for (size_t k = 0; k < tp->nSpecies(); k++) {
-		std::cout << tp->speciesName(k)<< " wdot = " << wdot[k+tp1->nSpecies()] << std::endl;
-	}*/
+
 	for (size_t k = 0; k < tp2->nSpecies(); k++) {
 		std::cout << tp2->speciesName(k)<< " wdot = " << wdot[k+tp1->nSpecies()+tp->nSpecies()] <<" speciesIdx = " <<k+tp1->nSpecies()+tp->nSpecies() << std::endl;
 	}
@@ -440,18 +430,25 @@ void thermoInitReactionROP_demo(std::string inFile) {
 	try {
 		//surfName = "O_surface";
 		//ThermoPhase* tp2 = (newPhase(inFile,"gas_cathode"));
-		surfName = "C_surface";
-		ThermoPhase* tp2 = (newPhase(inFile,"conductor"));
+		//surfName = "C_surface";
+		//ThermoPhase* tp2 = (newPhase(inFile,"conductor"));
 		//surfName = "Li2O2_precipitation_from_solution";
 		//ThermoPhase* tp2 = (newPhase(inFile,"Li2O2"));
+		surfName = "LiO2_precipitation";
+		ThermoPhase* tp2 = (newPhase(inFile,"conductor"));
+		ThermoPhase* tp3 = (newPhase(inFile,"LiO2"));
+		//ThermoPhase* tp4 = (newPhase(inFile,"Li2O2"));
 		ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
 		std::vector<ThermoPhase*> phaseList;
 		phaseList.push_back(tp1);
+		phaseList.push_back(tp3);
+		//phaseList.push_back(tp4);
 		phaseList.push_back(tp2);
 		Interface surf(inFile, surfName, phaseList);
 		// Set phase standard state
-		tp1->setState_TP(T,P);
-		tp2->setState_TP(T,P);
+		for (size_t k = 0; k < phaseList.size(); k++) {
+			phaseList[k]->setState_TP(T,P);
+		}
 		surf.setState_TP(T,P);
 		double mmu0;
 		std::cout<<"\nPrinting species thermodynamics..."<<std::endl;
@@ -509,3 +506,78 @@ void thermoInitReactionROP_demo(std::string inFile) {
 		std::cout<<err.what()<< std::endl;
 	}
 }
+
+void printThermoReactionO2(std::string inFile) {
+	std::string surfName;
+	double T=298.15;
+	double P=101325;
+	try {
+		surfName = "O_surface";
+		ThermoPhase* tp2 = (newPhase(inFile,"gas_cathode"));
+		ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
+		std::vector<ThermoPhase*> phaseList;
+		phaseList.push_back(tp1);
+		phaseList.push_back(tp2);
+		Interface surf(inFile, surfName, phaseList);
+		// Set phase standard state
+		for (size_t k = 0; k < phaseList.size(); k++) {
+			phaseList[k]->setState_TP(T,P);
+		}
+		surf.setState_TP(T,P);
+		double mmu0;
+		std::cout<<"\nPrinting species thermodynamics..."<<std::endl;
+		for (size_t k = 0; k < surf.nPhases(); k++) {
+			std::cout << "Name: "<<surf.thermo(k).name()<<" #Species: "<< surf.thermo(k).nSpecies()<<" density: "<<surf.thermo(k).density()<<std::endl;
+			vector_fp mu0(surf.thermo(k).nSpecies());
+			vector_fp mu(surf.thermo(k).nSpecies());
+			vector_fp h0(surf.thermo(k).nSpecies());
+			vector_fp s0(surf.thermo(k).nSpecies());
+			surf.thermo(k).getStandardChemPotentials(mu0.data());
+			surf.thermo(k).getChemPotentials(mu.data());
+			surf.thermo(k).getEnthalpy_RT(h0.data());
+			surf.thermo(k).getEntropy_R(s0.data());
+			for (size_t kk = 0; kk < surf.thermo(k).nSpecies(); kk++) {
+				mmu0 = mu0[kk] + Faraday * surf.thermo(k).electricPotential()*surf.thermo(k).charge(kk);
+				mmu0 -= surf.thermo(0).RT() * surf.thermo(k).logStandardConc(k);
+				std::cout <<"Species: "<< surf.thermo(k).speciesName(kk)
+						<<" : c0 = "<<surf.thermo(k).standardConcentration(kk)<<" : c = "<<surf.thermo(k).concentration(kk)
+						<<" mmu0: "<<mmu0<<" mu0: "<<mu0[kk]<<" mu: "<<mu[kk]<<" h0: "<<h0[kk]*GasConstant*T
+						<<" s0: "<<s0[kk]*GasConstant<<" mu0_calc=h0-T*s0: " <<h0[kk]*GasConstant*T-T*s0[kk]*GasConstant<<std::endl;
+			}
+			std::cout<<std::endl;
+		}
+		// Reaction thermodynamics
+		std::cout<<"Printing reaction thermodynamics..."<<std::endl;
+		vector_fp dG0(surf.nReactions());
+		vector_fp dG(surf.nReactions());
+		vector_fp dH(surf.nReactions());
+		vector_fp dS(surf.nReactions());
+		vector_fp kc(surf.nReactions());
+		vector_fp fdot(surf.nReactions());
+		vector_fp rdot(surf.nReactions());
+		surf.getDeltaSSGibbs(dG0.data());
+		surf.getDeltaGibbs(dG.data());
+		//surf.getDeltaEnthalpy(dH.data());
+		//surf.getDeltaEntropy(dS.data());
+		surf.getEquilibriumConstants(kc.data());
+		surf.getFwdRateConstants(fdot.data());
+		surf.getRevRateConstants(rdot.data());
+		for (size_t k = 0; k < surf.nReactions(); k++) {
+			std::cout<<"No: "<<k<<" "<<surf.reactionString(k)<<std::endl;
+			std::cout<<"dG(J/kmol)= "<<dG[k]<<" dG0(J/kmol)= "<<dG0[k]<<std::endl;
+			std::cout<<"dH(J/kmol)= "<<dH[k]<<" dS(J/(kmol.K))= "<<dS[k]<<std::endl;
+			std::cout<<"G_cal(J/kmol)=dH-TdS= " <<dH[k]-T*dS[k]<<std::endl;
+			std::cout<<"Keq = " <<kc[k]<<" K_cal=c0P/c0R*exp(-dG/RT)= "<<tp2->standardConcentration(0)/tp1->standardConcentration(0)*(std::exp(-dG[k]/(GasConstant*T)));
+			std::cout<<" K_cal=c0P/c0R*exp(-dG0/RT)= "<<tp2->standardConcentration(0)/tp1->standardConcentration(0)*(std::exp(-dG0[k]/(GasConstant*T)))<<std::endl;
+			std::cout<<std::endl;
+		}
+		vector_fp wdot(surf.nTotalSpecies());
+		surf.getNetProductionRates(wdot.data());
+		std::cout<<"Printing species ROP..."<<std::endl;
+		for (size_t kk = 0; kk < surf.nTotalSpecies(); kk++)
+			std::cout << surf.kineticsSpeciesName(kk)<< " wdot = " << wdot[kk]<< std::endl;
+	} catch (CanteraError& err){
+		std::cout<<err.what()<< std::endl;
+	}
+}
+
