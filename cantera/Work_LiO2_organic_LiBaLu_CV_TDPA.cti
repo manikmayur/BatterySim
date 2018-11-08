@@ -1,0 +1,242 @@
+#########################################################################
+#
+# This model file contains a lithium oxygen battery model with organic electrolyte and redox mediator
+# To be used in LiBaLU Project 2016-2018
+# Basic model was taken from D. Gruebl, B. Bergner, D. Schroeder, J. Janek and W. G. Bessler, J. Phys. Chem. C 120(43), pp 24623–24636 (2016)
+# and Neidhardt, cp. J. P. Neidhardt, D. N. Fronczek, T. Jahnke, T. Danner, B. Horstmann, and W. G. Bessler, J. Electrochem. Soc. 159, A1528-A1542 (2012)
+# Cell geometry and chemical parameters adjusted to experimental cells from ZSW in the scope of LiBaLu project 2017
+#
+# MULTI-STEP reaction mechanism
+# 3 OPTIONS implemented:
+# A: REVERSIBLE REACTION MECHANISM
+# B: IRREVERSIBLE REACTION MECHANISM
+# C: IRREVERSIBLE REACTION MECHANISM WITH REDOX MEDIATOR
+# 
+# Switch between the reaction mechanism in section SURFACES AND REACTIONS in this cti-file AND
+# Adjust relevant parameters in MODEL TYPES in the model file
+# STANDARD MODEL TYPE IS B (runs in model library)
+#
+#########################################################################
+
+#######################   UNITS     ####################################
+
+units(length = "m", time = "s", quantity = "kmol", act_energy = "kJ/mol")
+
+####################### BULK PHASES ####################################
+
+#---------------
+#---- DUMMY ----
+#---------------
+
+# Anode
+# ------------------------------------------------------------------------------------
+ideal_gas(name = "gas_anode", #this name MUST NOT be changed, DENIS relies on it
+      elements = " O H N",
+      species = "gri30:O2", #this MUST NOT be changed. It is replaced by the real species list from the denis input file during execution of DENIS
+      reactions = "all",
+      kinetics = "GRI30",
+      transport = "Mix")
+
+# Cathode
+# ------------------------------------------------------------------------------------
+
+ideal_gas(name = "gas_cathode",  #this name MUST NOT be changed, DENIS relies on it
+      elements = " O H N ",
+      species = "gri30:O2", #this MUST NOT be changed. It is replaced by the real species list from the denis input file during execution of DENIS
+      reactions = "all",
+      kinetics = "GRI30",
+      transport = "Mix")	  
+
+ideal_gas(
+	name          = "gas_dummy",
+    elements      = " O  H  C  N  Ar ",
+    species       = """ H2  H  O  O2  OH  H2O  HO2  H2O2  C  CH 
+                   CH2  CH2(S)  CH3  CH4  CO  CO2  HCO  CH2O  CH2OH  CH3O 
+                   CH3OH  C2H  C2H2  C2H3  C2H4  C2H5  C2H6  HCCO  CH2CO  HCCOH 
+                   N  NH  NH2  NH3  NNH  NO  NO2  N2O  HNO  CN
+                   HCN  H2CN  HCNN  HCNO  HOCN  HNCO  NCO  N2  AR  C3H7 
+                   C3H8  CH2CHO  CH3CHO """,
+    reactions     = "NONE",
+    kinetics      = "NONE",
+    transport     = "NONE",
+    initial_state = state( pressure = OneAtm, mole_fractions = ''))
+
+species(
+    name   = "(dummy)",
+    atoms  = "",
+    thermo = const_cp(h0 = (0.0, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))
+
+metal(
+	name 		= "conductor",
+	elements 	= "E", 
+	species		= "electron",
+	density 	= (1,'kg/m3'),
+	initial_state 	= state( mole_fractions = 'electron:1.0' ))
+
+species(
+	name   = "electron",
+	atoms  = "E:1",
+	thermo = const_cp(h0 = (0.0, 'kcal/mol'), s0 = (0.0, 'J/mol/K')))
+
+#---------------------
+#---- ELECTROLYTE ----
+#---------------------
+
+# Electrolyte 2M LiTFSI in DMSO + O2 + Redox mediator
+#IdealSolidSolution(
+incompressible_solid(
+    name          = "elyte",
+    elements      = "C H O Li E F N S",
+    species       = "DMSO[elyte] Li+[elyte] TFSI-[elyte] O2[elyte] O2-[elyte] TDPA[elyte] TDPA+[elyte] TDPA2+[elyte]",
+    density       = (1340, 'kg/m3'),   # Density of 2M LiTFSI in DMSO at 25°C; ZSW
+    #standard_concentration = "unity",
+    initial_state = state(mole_fractions = 'DMSO[elyte]:0.708934, Li+[elyte]:0.145180, TFSI-[elyte]:0.145180, O2[elyte]:1.686545e-04, O2-[elyte]:7.248812e-10, TDPA[elyte]:5.444138e-04, TDPA+[elyte]:7.248812e-10, TDPA2+[elyte]:7.248812e-10'))   # Fit to 2M LiTFSI DMSO and
+
+# MW_DMSO = 78.135040
+species(
+	name   = "DMSO[elyte]",
+	atoms  = "C:2, H:6, O:1, S:1",
+	thermo = const_cp(h0 = (0.0, 'kJ/mol'), s0 = (0.0, 'J/mol/K')),
+    #standardState = constantIncompressible(molarVolume = (71.027, 'cm3/gmol')))
+    standardState = constantIncompressible(molarVolume = (78.135040/1.34, 'cm3/gmol')))
+
+# MW Li = 6.94100
+species(
+	name   = "Li+[elyte]",
+	atoms  = "Li:1, E:-1",
+    thermo = const_cp(h0 = (-278.49,'kJ/mol'), s0 = (13.4, 'J/mol/K')),      # Li+(aq) from Atkins, P. W. Physikalische Chemie. 4., vollst. ueberarb. Aufl. - Weinheim : Wiley-VCH (2006)
+    standardState = constantIncompressible(molarVolume = (6.941/1.34, 'cm3/gmol')))
+    #standardState = constantIncompressible(molarVolume = (13.02, 'cm3/gmol')))
+
+# MW TFSI = 280.1487592
+species(
+	name   = "TFSI-[elyte]",
+	atoms  = "C:2, F:6, N:1, O:4, S:2, E:1",
+	thermo = const_cp(h0 = (0.0, 'kJ/mol'), s0 = (0.0, 'J/mol/K')),
+    #standardState = constantIncompressible(molarVolume = (0, 'cm3/gmol')))
+    standardState = constantIncompressible(molarVolume = (280.1487592/1.34, 'cm3/gmol')))
+    #standardState = constantIncompressible(molarVolume = (142, 'cm3/gmol')))
+
+#MW O2 = 31.99880
+species(
+	name = "O2[elyte]",
+	atoms = "O:2",
+    thermo = const_cp(h0 = (-37.9683, 'kJ/mol'), s0 = (0, 'J/mol/K')),      # Fitted to O2 solubility of 1.2 mM/L for 1M LiTFSI in DMSO at 22°C; Gittleson Energy & Environmental Science 10, 1167–1179 (2017).
+    standardState = constantIncompressible(molarVolume = (31.99880/1.34, 'cm3/gmol')))
+
+#MW O2 = 31.99880
+species(
+	name = "O2-[elyte]",
+	atoms = "O:2 E:1",
+    #thermo = const_cp(h0 = (-34.95, 'kJ/mol'), s0 = (0, 'J/mol/K')))    # E0 = 2.96 V fitted to deltaG of -20 kJ/mol for raction Li+[elyte] + O2-[elyte] <-> LiO2[surf] from Johnson, L.; Li, C.; Liu, Z.; Chen, Y.; Freunberger, S. A.; Ashok, P. C.; Praveen, B. B.; Dholakia, K.; Tarascon, J.-M.; Bruce, P. G. Nat. Chem. 2014, 6, 1091-1099.
+    thermo = const_cp(h0 = (-4.1986, 'kJ/mol'), s0 = (0, 'J/mol/K')),    # fitted to E0 = 2.65 V
+    standardState = constantIncompressible(molarVolume = (31.99880/1.34, 'cm3/gmol')))
+
+#Redox mediator: TDPA: Tris[4-(diethylamino)phenyl]amine : [(C2H5)2NC6H4]3N, MW: 458.69044 g/mol
+species(
+	name   = "TDPA[elyte]",
+	atoms  = "C:30, H:42, N:4",
+    thermo = const_cp(h0 = (0, 'kJ/mol'), s0 = (0.0, 'J/mol/K')), #Calculated to reach redox reaction potential of 3.74 V aus B. J. Bergner, A. Schuermann, K. Peppler, A. Garsuch, and J. Janek, J. Am. Chem. Soc. 136, 15054-15064 (2014)
+    standardState = constantIncompressible(molarVolume = (458.69044/1.34, 'cm3/gmol')))
+
+species(
+	name   = "TDPA+[elyte]",
+	atoms  = "C:30, H:42, N:4, E:-1",
+    #thermo = const_cp(h0 = (33.770, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))     # 3.35 V from ZSW
+    thermo = const_cp(h0 = (24.1213, 'kJ/mol'), s0 = (0.0, 'J/mol/K')),     # 3.25 V from ZSW
+    #thermo = const_cp(h0 = (27.2543, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))    # 3.2825 V from ZSW
+    #thermo = const_cp(h0 = (9.6485, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))     # 3.1 V from ZSW
+    standardState = constantIncompressible(molarVolume = (458.69044/1.34, 'cm3/gmol')))
+
+species(
+	name   = "TDPA2+[elyte]",
+	atoms  = "C:30, H:42, N:4, E:-2",
+    #thermo = const_cp(h0 = (91.6608, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))      # 3.35 V TDPA/TDPA+ / 3.6 V TDPA+/TDPA2+
+    #thermo = const_cp(h0 = (77.1880, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))    # 3.2 V TDPA/TDPA+ / 3.6 V TDPA+/TDPA2+
+    thermo = const_cp(h0 = (82.0123, 'kJ/mol'), s0 = (0.0, 'J/mol/K')),    # 3.25 V TDPA/TDPA+ / 3.6 V TDPA+/TDPA2+
+    #thermo = const_cp(h0 = (85.1453, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))    # 3.2825 V TDPA/TDPA+ / 3.6 V TDPA+/TDPA2+
+    #thermo = const_cp(h0 = (38.5940, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))    # 3.1 V TDPA/TDPA+ / 3.5 V TDPA+/TDPA2+
+    standardState = constantIncompressible(molarVolume = (458.69044/1.34, 'cm3/gmol')))
+
+#---------------------
+#---- Cathode ----
+#---------------------
+
+incompressible_solid(
+	name          = "graphite",
+	elements      = "C",
+	species       = "bulk[carbon]",
+	density       = (2260,'kg/m3'),  #Page 1101 in Atkins, P. W. Physikalische Chemie. 4., vollst. ueberarb. Aufl., Weinheim, Wiley-VCH (2006)
+	initial_state = state( mole_fractions = 'bulk[carbon]:1.0' ))
+
+species(
+	name 	= "bulk[carbon]",
+	atoms 	= "C:1",
+	thermo 	= const_cp(cp0 = (0, 'J/mol/K'), h0 = (0, 'kJ/mol'), s0 = (5.740, 'J/mol/K')))   # non reactive phase, values for graphite from from Atkins, P. W. Physikalische Chemie. 4., vollst. ueberarb. Aufl., Weinheim, Wiley-VCH (2006)
+
+#-----------------------
+#---- LITHIUM-Anode ----
+#-----------------------
+incompressible_solid(
+	name     = "lithium",
+	elements = "Li",
+	species  = "Li",
+	density  = (534.0,'kg/m3'))
+
+species(
+	name   = "Li",
+	atoms  = "Li:1",
+	thermo = const_cp(cp0 = (0.0, 'J/mol/K'), h0 = (0, 'kJ/mol'), s0 = (29.12, 'J/mol/K')))  #  W.M. Haynes, D.R. Lide, T.J. Bruno, CRC Handbook of Chemistry and Physics: A Ready-reference Book of Chemical and Physical Data 2013-2014, 94th edition, CRC Press (2013)
+
+#--------------------------------
+#---- SURFACES AND REACTIONS ----
+#--------------------------------
+
+#-------------------------
+#---- Oxygen-SURFACE ----
+#-------------------------
+
+ideal_interface(
+	name 		 = "O_surface",
+	elements 	 = " ",
+	species      = "(dummy)",
+	reactions	 = "oxygen-1",
+	site_density = (2.50e-5,'mol/cm2'),
+	phases       = "gas_cathode elyte")
+
+# No 1: O2 dissolution at gas/electrolyte interface
+#surface_reaction("O2 <=> O2[elyte]", [5e9, 0.0, (0, 'kJ/mol')], id="oxygen-1")  #set fast
+
+#-----------------------
+#---- ANODE-SURFACE ----
+#-----------------------
+
+ideal_interface(
+	name         = "Li_surface",
+	elements     = " ",
+	species      = "(dummy)",
+	reactions    = "lithium-*",
+	site_density = (2.50e-6,'mol/cm2'),
+	phases       = "lithium elyte conductor")
+
+# No 0: Li metal anode reaction
+edge_reaction("Li+[elyte] + electron <=> Li", [5e1, 0.0, (1e-6, 'kJ/mol')], rateCoeff = "exchangecurrentdensity", beta = 0.5, id="lithium-1")    #set fast
+
+#-------------------------
+#---- CATHODE-SURFACE ----
+#-------------------------
+
+ideal_interface(
+	name         = "C_surface",
+	elements     = " ",
+	species      = "(dummy)",
+	reactions    = "cathode-*",
+	site_density = (2.50e-5,'mol/cm2'),
+	phases       = "elyte conductor")
+
+# No 2: charge transfer reaction on carbon surface
+#edge_reaction("O2[elyte] + electron <=> O2-[elyte]", [0.2e3, 0.0, (1e-6, 'kJ/mol')], rateCoeff='exchangecurrentdensity', beta = 0.5, id="cathode-1") #  Fitted to match experimental discharge potential at 0.1 mA/cm2
+
+#No 7: TDPA oxidation at carbon surface
+edge_reaction("TDPA+[elyte] + electron <=> TDPA[elyte]", [1e5, 0.0, (1e-6, 'kJ/mol')], rateCoeff = "exchangecurrentdensity", beta = 0.5, id="cathode-2")
+edge_reaction("TDPA2+[elyte] + electron <=> TDPA+[elyte]", [1e5, 0.0, (1e-6, 'kJ/mol')], rateCoeff = "exchangecurrentdensity", beta = 0.5, id="cathode-3")

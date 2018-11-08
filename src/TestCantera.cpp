@@ -6,11 +6,10 @@
 // Description : Hello World in C++, Ansi-style
 //============================================================================
 
+#include <cantera/thermo/BinarySolutionTabulatedThermo.h>
 #include <iostream>
 #include <string>
 #include <sstream>
-#include "cantera/thermo/ConstDensityTabulatedThermo.h"
-#include "cantera/thermo/IdealSolidSolnPhaseTabulatedThermo.h"
 #include "cantera/thermo/ThermoFactory.h"
 #include "cantera/thermo/ThermoPhase.h"
 #include "cantera/Interface.h"
@@ -23,7 +22,7 @@
 using namespace Cantera;
 
 void thermoInitAnode_demo(std::string inFile);
-void thermoInitCathodeROP_demo(std::string inFile);
+void thermoInitCathodePhases(std::string inFile);
 void thermoInitAnodeROP_demo(std::string inFile);
 void thermoInitRefdemo(std::string inFile);
 void writeRxnPathDiagram(double time, ReactionPathBuilder& b,
@@ -35,18 +34,19 @@ void printThermoReactionO2(std::string inFile);
 int main() {
 	std::string inFile;
 	std::cout<<"Testing Cantera"<<std::endl;
-	inFile = "cantera\\Work_LiO2_organic_LiBaLu_November_1M_parallel_reactions.cti";
+	//inFile = "cantera\\Work_LiO2_organic_LiBaLu_CV_TDPA.cti";
+	//inFile = "cantera\\Work_LiO2_organic_LiBaLu_CV_TDPA.cti";
 	//inFile = "cantera\\Work_LiO2_organic_LiBaLu_November_1M_parallel_reactions_inwork.cti";
-	//inFile = "cantera\\Intercalation_LCO_Graphite.xml";
+	//inFile = "cantera\\Intercalation_LCO_Graphite.cti";
 	//inFile = "Final_Kupper_2016_JElectrochemSoc_LFP_C6_revised.xml";
 	try {
 		//thermoInitAnode_demo(inFile);
 		//thermoInitAnodeROP_demo(inFile);
 		//thermoInitRefdemo(inFile);
-		//thermoInitCathodeROP_demo(inFile);
+		//thermoInitCathodePhases(inFile);
 		//thermoTestSPM(inFile);
 		//thermoInitReactionROP_demo(inFile);
-		printThermoReactionO2(inFile);
+		printThermoReactionO2("cantera\\Work_LiO2_organic_LiBaLu_CV_TDPA.cti");
 		//thermoInitElectrolyte_demo(inFile);
 		//simple_demo2();
 	}
@@ -67,15 +67,15 @@ void thermoInitAnode_demo(std::string inFile) {
 	int type = 0;
 	try {
 		ThermoPhase* tp = (newPhase(inFile,"anode"));
-		IdealSolidSolnPhaseTabulatedThermo* Li_ion = dynamic_cast<IdealSolidSolnPhaseTabulatedThermo*> (tp);
+		BinarySolutionTabulatedThermo* Li_ion = dynamic_cast<BinarySolutionTabulatedThermo*> (tp);
 		//ConstDensityTabulatedThermo* Li_ion = dynamic_cast<ConstDensityTabulatedThermo*> (tp);
 		//std::cout<<Li_ion->report();
 		//SpeciesThermo& sp = Li_ion->speciesThermo(); //Cantera 2.2
 		Li_ion->setState_TP(T,P);
 
 		MultiSpeciesThermo& sp = Li_ion->speciesThermo();
-		size_t index = Li_ion->m_kk_mod;
-		type = sp.reportType(index);
+		//size_t index = Li_ion->m_kk_mod;
+		//type = sp.reportType(index);
 
 		//std::cout<<Li_ion->report();
 		//Li_ion->getChemPotentials(&mu);
@@ -89,10 +89,10 @@ void thermoInitAnode_demo(std::string inFile) {
 		Li_ion->setMoleFractions(ns);
 		std::cout<<Li_ion->report();
 
-		sp.reportParams(index, type, c, minTemp, maxTemp, refPressure);
+		//sp.reportParams(index, type, c, minTemp, maxTemp, refPressure);
 		printf("\nSpecies Thermo: At x=%f, h=%f, s=%f, E0=%f\n",x, c[1],c[2], 1e-3/96485*(-c[1]+298.15*c[2]));
 
-		printf("\nValues from data: At x=%f, h=%f, s=%f\n",x, Li_ion->interp_h(x)*1e3,Li_ion->interp_s(x)*1e3);
+		//printf("\nValues from data: At x=%f, h=%f, s=%f\n",x, Li_ion->interp_h(x)*1e3,Li_ion->interp_s(x)*1e3);
 		//printf("\nMethods of Thermoclass: At x=%f, s=%f, scalc=%f, xlx=%f\n",x, GasConstant*Li_ion->mean_X(Li_ion->getEntropy_R()), Li_ion->interp_s(x)*1e3+GasConstant*log(x/(1-x)), GasConstant*Li_ion->sum_xlogx());
 		delete tp;
 	} catch (const std::exception& ex) {
@@ -120,17 +120,18 @@ void printData(ThermoPhase* tp) {
 	}
 }
 
-void thermoInitCathodeROP_demo(std::string inFile) {
+void thermoInitCathodePhases(std::string inFile) {
 	std::string s = "";
 	double T=298.15;
 	double P=101325;
 	double dG, dH, dS, dG0;
 	try {
-		ThermoPhase* tp = (newPhase(inFile,"electrolyte"));
-		//ThermoPhase* tp1 = (newPhase(inFile,"cathode"));
-		ThermoPhase* tp2 = (newPhase(inFile,"conductor"));
-		std::vector<ThermoPhase*> phaseList;
-		phaseList.push_back(tp);
+		ThermoPhase* tp = (newPhase(inFile,"elyte"));
+		std::cout<<tp->report()<<std::endl;
+		/*ThermoPhase* tp1 = (newPhase(inFile,"cathode"));
+		//ThermoPhase* tp2 = (newPhase(inFile,"conductor"));
+		//std::vector<ThermoPhase*> phaseList;
+		//phaseList.push_back(tp);
 		//phaseList.push_back(tp1);
 		phaseList.push_back(tp2);
 		//Edge surf(inFile, "interface_cathode", phaseList);
@@ -177,7 +178,6 @@ void thermoInitCathodeROP_demo(std::string inFile) {
 
 		// main loop
 		writeRxnPathDiagram(0, b, surf, rplog, rplot);
-		/*
 		for (int i = 1; i <= nsteps; i++) {
 			tm = i*dt;
 			sim.advance(tm);
@@ -372,6 +372,7 @@ void thermoTestSPM(std::string inFile) {
 		ThermoPhase* tp = (newPhase(inFile,"anode"));
 		ThermoPhase* tp1 = (newPhase(inFile,"electron"));
 		ThermoPhase* tp2 = (newPhase(inFile,"electrolyte"));
+		ThermoPhase* tp3 = (newPhase(inFile,"cathode"));
 		std::vector<ThermoPhase*> phaseList;
 		phaseList.push_back(tp);
 		phaseList.push_back(tp1);
@@ -380,13 +381,16 @@ void thermoTestSPM(std::string inFile) {
 
 		//Interface surf(inFile, "interface_cathode", phaseList);
 		//std::cout<<surf.phaseIndex("cathode")<<" "<<surf.phaseIndex("electrolyte")<<" "<<surf.phaseIndex("electron_cathode");
-		tp->setState_TP(T,P);
-		tp1->setState_TP(T,P);
-		tp2->setState_TP(T,P);
+		tp3->setState_TP(T,P);
 		surf.setState_TP(T,P);
 		for (size_t k = 0; k < phaseList.size(); k++) {
 			phaseList[k]->setState_TP(T,P);
 		}
+		std::cout<<tp->report()<<std::endl;
+		std::cout<<tp1->report()<<std::endl;
+		std::cout<<tp2->report()<<std::endl;
+		std::cout<<tp3->report()<<std::endl;
+		/*
 		//std::cout<<tp2->molarDensity()<<" : "<<tp2->density()<<std::endl;
 		for (size_t kk = 0; kk < tp->nSpecies(); kk++)
 					std::cout << tp->speciesName(kk)<<" : "<<tp->standardConcentration(kk)<<" : "<< tp->concentration(kk)<< std::endl;
@@ -417,6 +421,7 @@ void thermoTestSPM(std::string inFile) {
 		//std::cout << "Name: "<<phaseList[k]->name()<<" density: "<<phaseList[k]->density()<< std::endl;
 		for (size_t kk = 0; kk < surf.nTotalSpecies(); kk++)
 			std::cout << surf.kineticsSpeciesName(kk)<< " wdot = " << wdot[kk]<< std::endl;
+			*/
 
 	} catch (CanteraError& err){
 		std::cout<<err.what()<< std::endl;
@@ -428,20 +433,20 @@ void thermoInitReactionROP_demo(std::string inFile) {
 	double T=298.15;
 	double P=101325;
 	try {
-		//surfName = "O_surface";
-		//ThermoPhase* tp2 = (newPhase(inFile,"gas_cathode"));
-		//surfName = "C_surface";
-		//ThermoPhase* tp2 = (newPhase(inFile,"conductor"));
-		//surfName = "Li2O2_precipitation_from_solution";
-		//ThermoPhase* tp2 = (newPhase(inFile,"Li2O2"));
-		surfName = "LiO2_precipitation";
+		/*surfName = "O_surface";
+		ThermoPhase* tp2 = (newPhase(inFile,"gas_cathode"));*/
+		surfName = "C_surface";
+		ThermoPhase* tp2 = (newPhase(inFile,"conductor"));
+		/*surfName = "Li2O2_precipitation_from_solution";
+		ThermoPhase* tp2 = (newPhase(inFile,"Li2O2"));*/
+		/*surfName = "LiO2_precipitation";
 		ThermoPhase* tp2 = (newPhase(inFile,"conductor"));
 		ThermoPhase* tp3 = (newPhase(inFile,"LiO2"));
-		//ThermoPhase* tp4 = (newPhase(inFile,"Li2O2"));
+		ThermoPhase* tp4 = (newPhase(inFile,"Li2O2"));*/
 		ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
 		std::vector<ThermoPhase*> phaseList;
 		phaseList.push_back(tp1);
-		phaseList.push_back(tp3);
+		//phaseList.push_back(tp3);
 		//phaseList.push_back(tp4);
 		phaseList.push_back(tp2);
 		Interface surf(inFile, surfName, phaseList);
@@ -460,11 +465,11 @@ void thermoInitReactionROP_demo(std::string inFile) {
 			vector_fp s0(surf.thermo(k).nSpecies());
 			surf.thermo(k).getStandardChemPotentials(mu0.data());
 			surf.thermo(k).getChemPotentials(mu.data());
-			surf.thermo(k).getEnthalpy_RT(h0.data());
-			surf.thermo(k).getEntropy_R(s0.data());
+			//surf.thermo(k).getEnthalpy_RT(h0.data());
+			//surf.thermo(k).getEntropy_R(s0.data());
 			for (size_t kk = 0; kk < surf.thermo(k).nSpecies(); kk++) {
 				mmu0 = mu0[kk] + Faraday * surf.thermo(k).electricPotential()*surf.thermo(k).charge(kk);
-				mmu0 -= surf.thermo(0).RT() * surf.thermo(k).logStandardConc(k);
+				//mmu0 -= surf.thermo(0).RT() * surf.thermo(k).logStandardConc(k);
 				std::cout <<"Species: "<< surf.thermo(k).speciesName(kk)
 						<<" : c0 = "<<surf.thermo(k).standardConcentration(kk)<<" : c = "<<surf.thermo(k).concentration(kk)
 						<<" mmu0: "<<mmu0<<" mu0: "<<mu0[kk]<<" mu: "<<mu[kk]<<" h0: "<<h0[kk]*GasConstant*T
@@ -483,8 +488,8 @@ void thermoInitReactionROP_demo(std::string inFile) {
 		vector_fp rdot(surf.nReactions());
 		surf.getDeltaSSGibbs(dG0.data());
 		surf.getDeltaGibbs(dG.data());
-		surf.getDeltaEnthalpy(dH.data());
-		surf.getDeltaEntropy(dS.data());
+		//surf.getDeltaEnthalpy(dH.data());
+		//surf.getDeltaEntropy(dS.data());
 		surf.getEquilibriumConstants(kc.data());
 		surf.getFwdRateConstants(fdot.data());
 		surf.getRevRateConstants(rdot.data());
@@ -524,6 +529,21 @@ void printThermoReactionO2(std::string inFile) {
 			phaseList[k]->setState_TP(T,P);
 		}
 		surf.setState_TP(T,P);
+		vector_fp c(phaseList[0]->nSpecies());
+		vector_fp x(phaseList[0]->nSpecies());
+		c[0] = 9.78;
+		c[1] = 2;
+		c[2] = 2;
+		c[3] = 2.3e-3;
+		c[4] = 1e-8;
+		c[5] = 7.5e-3;
+		c[6] = 1e-8;
+		c[7] = 1e-8;
+		phaseList[0]->setConcentrations(c.data());
+		phaseList[0]->getMoleFractions(x.data());
+		for (size_t k = 0; k < phaseList[0]->nSpecies(); k++) {
+					std::cout << "Name: "<<phaseList[0]->speciesName(k)<<" x: "<< x[k]<<std::endl;
+		}
 		double mmu0;
 		std::cout<<"\nPrinting species thermodynamics..."<<std::endl;
 		for (size_t k = 0; k < surf.nPhases(); k++) {
