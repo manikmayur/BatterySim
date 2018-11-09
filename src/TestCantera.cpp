@@ -531,6 +531,8 @@ void printThermoReactionO2(std::string inFile) {
 		surf.setState_TP(T,P);
 		vector_fp c(phaseList[0]->nSpecies());
 		vector_fp x(phaseList[0]->nSpecies());
+		tp2->setPressure(P*1.958);
+		/*
 		c[0] = 9.78;
 		c[1] = 2;
 		c[2] = 2;
@@ -540,7 +542,8 @@ void printThermoReactionO2(std::string inFile) {
 		c[6] = 1e-8;
 		c[7] = 1e-8;
 		phaseList[0]->setConcentrations(c.data());
-		phaseList[0]->getMoleFractions(x.data());
+		phaseList[0]->getMoleFractions(x.data());*/
+
 		for (size_t k = 0; k < phaseList[0]->nSpecies(); k++) {
 					std::cout << "Name: "<<phaseList[0]->speciesName(k)<<" x: "<< x[k]<<std::endl;
 		}
@@ -596,6 +599,7 @@ void printThermoReactionO2(std::string inFile) {
 		std::cout<<"Printing species ROP..."<<std::endl;
 		for (size_t kk = 0; kk < surf.nTotalSpecies(); kk++)
 			std::cout << surf.kineticsSpeciesName(kk)<< " wdot = " << wdot[kk]<< std::endl;
+		//surf.equilibrate("TP");
 	} catch (CanteraError& err){
 		std::cout<<err.what()<< std::endl;
 	}
