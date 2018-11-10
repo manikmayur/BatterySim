@@ -121,7 +121,8 @@ species(
 species(
 	name = "O2[elyte]",
 	atoms = "O:2",
-    thermo = const_cp(h0 = (-37.9683, 'kJ/mol'), s0 = (0, 'J/mol/K')),      # Fitted to O2 solubility of 1.2 mM/L for 1M LiTFSI in DMSO at 22°C; Gittleson Energy & Environmental Science 10, 1167–1179 (2017).
+    #thermo = const_cp(h0 = (-37.9683, 'kJ/mol'), s0 = (0, 'J/mol/K')),      # Fitted to O2 solubility of 1.2 mM/L for 1M LiTFSI in DMSO at 22°C; Gittleson Energy & Environmental Science 10, 1167–1179 (2017).
+    thermo = const_cp(h0 = (-39.60107142746, 'kJ/mol'), s0 = (0, 'J/mol/K')),
     standardState = constantIncompressible(molarVolume = (31.99880/1.34185, 'cm3/gmol')))
 
 # Superoxide ion: O2-, MW: 31.998255 g/mol
@@ -209,7 +210,7 @@ ideal_interface(
 	phases       = "gas_cathode elyte")
 
 # No 1: O2 dissolution at gas/electrolyte interface
-surface_reaction("O2 <=> O2[elyte]", [5e9, 0.0, (0, 'kJ/mol')], id="oxygen-1")  #set fast
+surface_reaction("O2 <=> O2[elyte]", [5e0, 0.0, (0, 'kJ/mol')], id="oxygen-1")  #set fast
 
 #-----------------------
 #---- ANODE-SURFACE ----

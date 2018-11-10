@@ -1,0 +1,366 @@
+<?xml version="1.0"?>
+<ctml>
+  <validate reactions="yes" species="yes"/>
+
+  <!-- phase gas_anode     -->
+  <phase dim="3" id="gas_anode">
+    <elementArray datasrc="elements.xml">O H N</elementArray>
+    <speciesArray datasrc="gri30.xml#species_data">O2</speciesArray>
+    <reactionArray datasrc="#reaction_data"/>
+    <thermo model="IdealGas"/>
+    <kinetics model="GRI30"/>
+    <transport model="Mix"/>
+  </phase>
+
+  <!-- phase gas_cathode     -->
+  <phase dim="3" id="gas_cathode">
+    <elementArray datasrc="elements.xml">O H N </elementArray>
+    <speciesArray datasrc="gri30.xml#species_data">O2</speciesArray>
+    <reactionArray datasrc="#reaction_data"/>
+    <thermo model="IdealGas"/>
+    <kinetics model="GRI30"/>
+    <transport model="Mix"/>
+  </phase>
+
+  <!-- phase gas_dummy     -->
+  <phase dim="3" id="gas_dummy">
+    <elementArray datasrc="elements.xml">O  H  C  N  Ar </elementArray>
+    <speciesArray datasrc="#species_data">
+      H2  H  O  O2  OH  H2O  HO2  H2O2  C  CH 
+      CH2  CH2(S)  CH3  CH4  CO  CO2  HCO  CH2O  CH2OH  CH3O 
+      CH3OH  C2H  C2H2  C2H3  C2H4  C2H5  C2H6  HCCO  CH2CO  HCCOH 
+      N  NH  NH2  NH3  NNH  NO  NO2  N2O  HNO  CN
+      HCN  H2CN  HCNN  HCNO  HOCN  HNCO  NCO  N2  AR  C3H7 
+      C3H8  CH2CHO  CH3CHO </speciesArray>
+    <reactionArray datasrc="#reaction_data">
+      <include max="NONE" min="NONE"/>
+    </reactionArray>
+    <state>
+      <pressure units="Pa">101325.0</pressure>
+    </state>
+    <thermo model="IdealGas"/>
+    <kinetics model="NONE"/>
+    <transport model="NONE"/>
+  </phase>
+
+  <!-- phase conductor     -->
+  <phase dim="3" id="conductor">
+    <elementArray datasrc="elements.xml">E</elementArray>
+    <speciesArray datasrc="#species_data">electron</speciesArray>
+    <state>
+      <moleFractions>electron:1.0</moleFractions>
+    </state>
+    <thermo model="Metal">
+      <density units="kg/m3">1</density>
+    </thermo>
+    <transport model="None"/>
+    <kinetics model="none"/>
+  </phase>
+
+  <!-- phase elyte     -->
+  <phase dim="3" id="elyte">
+    <elementArray datasrc="elements.xml">C H O Li E F N S</elementArray>
+    <speciesArray datasrc="#species_data">DMSO[elyte] Li+[elyte] TFSI-[elyte] O2[elyte] O2-[elyte] TDPA[elyte] TDPA+[elyte] TDPA2+[elyte]</speciesArray>
+    <reactionArray datasrc="#reaction_data">
+      <include max="None" min="None"/>
+    </reactionArray>
+    <state>
+      <moleFractions>DMSO[elyte]:0.70922, Li+[elyte]:0.145035, TFSI-[elyte]:0.145035, O2[elyte]:1.6679e-4, O2-[elyte]:7.25174e-10, TDPA[elyte]:5.4388e-4, TDPA+[elyte]:7.25174e-10, TDPA2+[elyte]:7.25174e-10</moleFractions>
+    </state>
+    <thermo model="IdealSolidSolution"/>
+    <transport model="None"/>
+    <kinetics model="none"/>
+    <standardConc model="unity"/>
+  </phase>
+
+  <!-- phase graphite     -->
+  <phase dim="3" id="graphite">
+    <elementArray datasrc="elements.xml">C</elementArray>
+    <speciesArray datasrc="#species_data">bulk[carbon]</speciesArray>
+    <state>
+      <moleFractions>bulk[carbon]:1.0</moleFractions>
+    </state>
+    <thermo model="Incompressible">
+      <density units="kg/m3">2260</density>
+    </thermo>
+    <transport model="None"/>
+    <kinetics model="none"/>
+  </phase>
+
+  <!-- phase lithium     -->
+  <phase dim="3" id="lithium">
+    <elementArray datasrc="elements.xml">Li</elementArray>
+    <speciesArray datasrc="#species_data">Li</speciesArray>
+    <thermo model="Incompressible">
+      <density units="kg/m3">534.0</density>
+    </thermo>
+    <transport model="None"/>
+    <kinetics model="none"/>
+  </phase>
+
+  <!-- phase O_surface     -->
+  <phase dim="2" id="O_surface">
+    <elementArray datasrc="elements.xml"/>
+    <speciesArray datasrc="#species_data">(dummy)</speciesArray>
+    <reactionArray datasrc="#reaction_data">
+      <include max="oxygen-1" min="oxygen-1"/>
+    </reactionArray>
+    <thermo model="Surface">
+      <site_density units="mol/cm2">2.5e-05</site_density>
+    </thermo>
+    <kinetics model="Interface"/>
+    <transport model="None"/>
+    <phaseArray>gas_cathode elyte</phaseArray>
+  </phase>
+
+  <!-- phase Li_surface     -->
+  <phase dim="2" id="Li_surface">
+    <elementArray datasrc="elements.xml"/>
+    <speciesArray datasrc="#species_data">(dummy)</speciesArray>
+    <reactionArray datasrc="#reaction_data">
+      <include max="lithium-*" min="lithium-*"/>
+    </reactionArray>
+    <thermo model="Surface">
+      <site_density units="mol/cm2">2.5e-06</site_density>
+    </thermo>
+    <kinetics model="Interface"/>
+    <transport model="None"/>
+    <phaseArray>lithium elyte conductor</phaseArray>
+  </phase>
+
+  <!-- phase C_surface     -->
+  <phase dim="2" id="C_surface">
+    <elementArray datasrc="elements.xml"/>
+    <speciesArray datasrc="#species_data">(dummy)</speciesArray>
+    <reactionArray datasrc="#reaction_data">
+      <include max="cathode-*" min="cathode-*"/>
+    </reactionArray>
+    <thermo model="Surface">
+      <site_density units="mol/cm2">2.5e-05</site_density>
+    </thermo>
+    <kinetics model="Interface"/>
+    <transport model="None"/>
+    <phaseArray>elyte conductor</phaseArray>
+  </phase>
+
+  <!-- species definitions     -->
+  <speciesData id="species_data">
+
+    <!-- species (dummy)    -->
+    <species name="(dummy)">
+      <atomArray/>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">0.0</h0>
+           <s0 units="J/mol/K">0.0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+
+    <!-- species electron    -->
+    <species name="electron">
+      <atomArray>E:1 </atomArray>
+      <charge>-1</charge>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kcal/mol">0.0</h0>
+           <s0 units="J/mol/K">0.0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+
+    <!-- species DMSO[elyte]    -->
+    <species name="DMSO[elyte]">
+      <atomArray>H:6 C:2 S:1 O:1 </atomArray>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">0.0</h0>
+           <s0 units="J/mol/K">0.0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+      <standardState model="constant_incompressible">
+        <molarVolume units="cm3/gmol">58.22934009017402</molarVolume>
+      </standardState>
+    </species>
+
+    <!-- species Li+[elyte]    -->
+    <species name="Li+[elyte]">
+      <atomArray>E:-1 Li:1 </atomArray>
+      <charge>1</charge>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">-298.0109665</h0>
+           <s0 units="J/mol/K">13.4</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+      <standardState model="constant_incompressible">
+        <molarVolume units="cm3/gmol">5.17230316354287</molarVolume>
+      </standardState>
+    </species>
+
+    <!-- species TFSI-[elyte]    -->
+    <species name="TFSI-[elyte]">
+      <atomArray>C:2 E:1 F:6 O:4 N:1 S:2 </atomArray>
+      <charge>-1</charge>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">0.0</h0>
+           <s0 units="J/mol/K">0.0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+      <standardState model="constant_incompressible">
+        <molarVolume units="cm3/gmol">208.77759376979543</molarVolume>
+      </standardState>
+    </species>
+
+    <!-- species O2[elyte]    -->
+    <species name="O2[elyte]">
+      <atomArray>O:2 </atomArray>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">-39.60107142746</h0>
+           <s0 units="J/mol/K">0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+      <standardState model="constant_incompressible">
+        <molarVolume units="cm3/gmol">23.84677870104706</molarVolume>
+      </standardState>
+    </species>
+
+    <!-- species O2-[elyte]    -->
+    <species name="O2-[elyte]">
+      <atomArray>E:1 O:2 </atomArray>
+      <charge>-1</charge>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">-4.1986</h0>
+           <s0 units="J/mol/K">0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+      <standardState model="constant_incompressible">
+        <molarVolume units="cm3/gmol">23.84637254536647</molarVolume>
+      </standardState>
+    </species>
+
+    <!-- species TDPA[elyte]    -->
+    <species name="TDPA[elyte]">
+      <atomArray>H:42 C:30 N:4 </atomArray>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">-5.26734</h0>
+           <s0 units="J/mol/K">0.0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+      <standardState model="constant_incompressible">
+        <molarVolume units="cm3/gmol">341.8343630062973</molarVolume>
+      </standardState>
+    </species>
+
+    <!-- species TDPA+[elyte]    -->
+    <species name="TDPA+[elyte]">
+      <atomArray>H:42 C:30 E:-1 N:4 </atomArray>
+      <charge>1</charge>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">0.7050827734</h0>
+           <s0 units="J/mol/K">0.0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+      <standardState model="constant_incompressible">
+        <molarVolume units="cm3/gmol">341.8339568506167</molarVolume>
+      </standardState>
+    </species>
+
+    <!-- species TDPA2+[elyte]    -->
+    <species name="TDPA2+[elyte]">
+      <atomArray>H:42 C:30 E:-2 N:4 </atomArray>
+      <charge>2</charge>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">36.87730927</h0>
+           <s0 units="J/mol/K">0.0</s0>
+           <cp0 units="J/kmol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+      <standardState model="constant_incompressible">
+        <molarVolume units="cm3/gmol">341.8335506949361</molarVolume>
+      </standardState>
+    </species>
+
+    <!-- species bulk[carbon]    -->
+    <species name="bulk[carbon]">
+      <atomArray>C:1 </atomArray>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">0</h0>
+           <s0 units="J/mol/K">5.74</s0>
+           <cp0 units="J/mol/K">0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+
+    <!-- species Li    -->
+    <species name="Li">
+      <atomArray>Li:1 </atomArray>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">0</h0>
+           <s0 units="J/mol/K">29.12</s0>
+           <cp0 units="J/mol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+  </speciesData>
+  <reactionData id="reaction_data">
+
+    <!-- reaction oxygen-1    -->
+    <reaction reversible="yes" type="surface" id="oxygen-1">
+      <equation>2 O2 [=] 2 O2[elyte]</equation>
+      <rateCoeff>
+        <Arrhenius>
+           <A>5.000000E+00</A>
+           <b>0.0</b>
+           <E units="kJ/mol">0.000000</E>
+        </Arrhenius>
+      </rateCoeff>
+      <reactants>O2:1.0</reactants>
+      <products>O2[elyte]:1.0</products>
+    </reaction>
+
+    <!-- reaction lithium-1    -->
+    <reaction reversible="yes" type="edge" id="lithium-1">
+      <equation>Li+[elyte] + electron [=] Li</equation>
+      <rateCoeff type="exchangecurrentdensity">
+        <electrochem beta="0.5"/>
+        <Arrhenius>
+           <A>5.000000E+01</A>
+           <b>0.0</b>
+           <E units="kJ/mol">0.000001</E>
+        </Arrhenius>
+      </rateCoeff>
+      <reactants>electron:1 Li+[elyte]:1.0</reactants>
+      <products>Li:1.0</products>
+    </reaction>
+  </reactionData>
+</ctml>

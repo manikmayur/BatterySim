@@ -46,7 +46,7 @@ int main() {
 		//thermoInitCathodePhases(inFile);
 		//thermoTestSPM(inFile);
 		//thermoInitReactionROP_demo(inFile);
-		printThermoReactionO2("cantera\\Work_LiO2_organic_LiBaLu_CV_TDPA.cti");
+		printThermoReactionO2("cantera\\Work_LiO2_organic_LiBaLu_CV_TDPA.xml");
 		//thermoInitElectrolyte_demo(inFile);
 		//simple_demo2();
 	}
@@ -531,7 +531,7 @@ void printThermoReactionO2(std::string inFile) {
 		surf.setState_TP(T,P);
 		vector_fp c(phaseList[0]->nSpecies());
 		vector_fp x(phaseList[0]->nSpecies());
-		tp2->setPressure(P*1.958);
+		//tp2->setPressure(P*1.958);
 		/*
 		c[0] = 9.78;
 		c[1] = 2;
@@ -555,15 +555,18 @@ void printThermoReactionO2(std::string inFile) {
 			vector_fp mu(surf.thermo(k).nSpecies());
 			vector_fp h0(surf.thermo(k).nSpecies());
 			vector_fp s0(surf.thermo(k).nSpecies());
+			vector_fp ac(surf.thermo(k).nSpecies());
 			surf.thermo(k).getStandardChemPotentials(mu0.data());
 			surf.thermo(k).getChemPotentials(mu.data());
 			surf.thermo(k).getEnthalpy_RT(h0.data());
 			surf.thermo(k).getEntropy_R(s0.data());
+			surf.thermo(k).getActivityConcentrations(ac.data());
 			for (size_t kk = 0; kk < surf.thermo(k).nSpecies(); kk++) {
 				mmu0 = mu0[kk] + Faraday * surf.thermo(k).electricPotential()*surf.thermo(k).charge(kk);
 				mmu0 -= surf.thermo(0).RT() * surf.thermo(k).logStandardConc(k);
 				std::cout <<"Species: "<< surf.thermo(k).speciesName(kk)
 						<<" : c0 = "<<surf.thermo(k).standardConcentration(kk)<<" : c = "<<surf.thermo(k).concentration(kk)
+						<<" : ac = "<< ac[kk]
 						<<" mmu0: "<<mmu0<<" mu0: "<<mu0[kk]<<" mu: "<<mu[kk]<<" h0: "<<h0[kk]*GasConstant*T
 						<<" s0: "<<s0[kk]*GasConstant<<" mu0_calc=h0-T*s0: " <<h0[kk]*GasConstant*T-T*s0[kk]*GasConstant<<std::endl;
 			}
@@ -578,6 +581,8 @@ void printThermoReactionO2(std::string inFile) {
 		vector_fp kc(surf.nReactions());
 		vector_fp fdot(surf.nReactions());
 		vector_fp rdot(surf.nReactions());
+		vector_fp frop(surf.nReactions());
+		vector_fp rrop(surf.nReactions());
 		surf.getDeltaSSGibbs(dG0.data());
 		surf.getDeltaGibbs(dG.data());
 		//surf.getDeltaEnthalpy(dH.data());
@@ -585,6 +590,8 @@ void printThermoReactionO2(std::string inFile) {
 		surf.getEquilibriumConstants(kc.data());
 		surf.getFwdRateConstants(fdot.data());
 		surf.getRevRateConstants(rdot.data());
+		surf.getFwdRatesOfProgress(frop.data());
+		surf.getRevRatesOfProgress(rrop.data());
 		for (size_t k = 0; k < surf.nReactions(); k++) {
 			std::cout<<"No: "<<k<<" "<<surf.reactionString(k)<<std::endl;
 			std::cout<<"dG(J/kmol)= "<<dG[k]<<" dG0(J/kmol)= "<<dG0[k]<<std::endl;
@@ -598,7 +605,7 @@ void printThermoReactionO2(std::string inFile) {
 		surf.getNetProductionRates(wdot.data());
 		std::cout<<"Printing species ROP..."<<std::endl;
 		for (size_t kk = 0; kk < surf.nTotalSpecies(); kk++)
-			std::cout << surf.kineticsSpeciesName(kk)<< " wdot = " << wdot[kk]<< std::endl;
+			std::cout << surf.kineticsSpeciesName(kk)<< " wdot = " << wdot[kk] << " fdot ="<< fdot[kk] << " frop = " << frop[kk] << " rdot = " << rdot[kk] << " rrop = " << rrop[kk] << " Keq = " << fdot[kk]/rdot[kk]<< std::endl;
 		//surf.equilibrate("TP");
 	} catch (CanteraError& err){
 		std::cout<<err.what()<< std::endl;
