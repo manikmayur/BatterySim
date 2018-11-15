@@ -91,7 +91,7 @@
   <phase dim="3" id="lithium">
     <elementArray datasrc="elements.xml">Li</elementArray>
     <speciesArray datasrc="#species_data">Li</speciesArray>
-    <thermo model="Incompressible">
+    <thermo model="StoichSubstance">
       <density units="kg/m3">534.0</density>
     </thermo>
     <transport model="None"/>
@@ -333,6 +333,22 @@
     </species>
   </speciesData>
   <reactionData id="reaction_data">
+  
+  <!-- reaction cathode-1    -->
+    <reaction reversible="yes" type="surface" id="cathode-1">
+      <equation>O2[elyte] + electron [=] O2-[elyte] </equation>
+      <rateCoeff type="exchangecurrentdensity">
+        <electrochem beta="0.5"/>
+        <Arrhenius>
+           <A>0.2E+03</A>
+           <b>0.0</b>
+           <E units="kJ/mol">1E-06</E>
+        </Arrhenius>
+      </rateCoeff>
+      <reactants>electron:1 O2[elyte]:1.0</reactants>
+      <products>O2-[elyte]:1.0</products>
+    </reaction>
+  
 
     <!-- reaction oxygen-1    -->
     <reaction reversible="yes" type="surface" id="oxygen-1">

@@ -2,7 +2,7 @@
 #
 # This model file contains a lithium oxygen battery model with organic electrolyte and redox mediator
 # To be used in LiBaLU Project 2016-2018
-# Basic model was taken from D. Gruebl, B. Bergner, D. Schroeder, J. Janek and W. G. Bessler, J. Phys. Chem. C 120(43), pp 24623–24636 (2016)
+# Basic model was taken from D. Gruebl, B. Bergner, D. Schroeder, J. Janek and W. G. Bessler, J. Phys. Chem. C 120(43), pp 24623ï¿½24636 (2016)
 # and Neidhardt, cp. J. P. Neidhardt, D. N. Fronczek, T. Jahnke, T. Danner, B. Horstmann, and W. G. Bessler, J. Electrochem. Soc. 159, A1528-A1542 (2012)
 # Cell geometry and chemical parameters adjusted to experimental cells from ZSW in the scope of LiBaLu project 2017
 #
@@ -83,7 +83,7 @@ species(
 # Organosulfur electrolyte
 # Solvent: Dimethyl sulfoxide
 # Salt: 2M LiTFSI + 7.5 mM TDPA
-# Density: 1341.85 kg/m3 (2M LiTFSI in DMSO at 25°C; ZSW)
+# Density: 1341.85 kg/m3 (2M LiTFSI in DMSO at 25ï¿½C; ZSW)
 #  - Used to calculate species molar volume as molecular weight (MW)/density
 #--------------------------------------------------------------------
 
@@ -121,7 +121,7 @@ species(
 species(
 	name = "O2[elyte]",
 	atoms = "O:2",
-    #thermo = const_cp(h0 = (-37.9683, 'kJ/mol'), s0 = (0, 'J/mol/K')),      # Fitted to O2 solubility of 1.2 mM/L for 1M LiTFSI in DMSO at 22°C; Gittleson Energy & Environmental Science 10, 1167–1179 (2017).
+    #thermo = const_cp(h0 = (-37.9683, 'kJ/mol'), s0 = (0, 'J/mol/K')),      # Fitted to O2 solubility of 1.2 mM/L for 1M LiTFSI in DMSO at 22ï¿½C; Gittleson Energy & Environmental Science 10, 1167ï¿½1179 (2017).
     thermo = const_cp(h0 = (-39.60107142746, 'kJ/mol'), s0 = (0, 'J/mol/K')),
     standardState = constantIncompressible(molarVolume = (31.99880/1.34185, 'cm3/gmol')))
 
@@ -240,8 +240,8 @@ ideal_interface(
 	phases       = "elyte conductor")
 
 # No 2: charge transfer reaction on carbon surface
-#edge_reaction("O2[elyte] + electron <=> O2-[elyte]", [0.2e3, 0.0, (1e-6, 'kJ/mol')], rateCoeff='exchangecurrentdensity', beta = 0.5, id="cathode-1") #  Fitted to match experimental discharge potential at 0.1 mA/cm2
+edge_reaction("O2[elyte] + electron <=> O2-[elyte]", [0.2e3, 0.0, (1e-6, 'kJ/mol')], rateCoeff='exchangecurrentdensity', beta = 0.5, id="cathode-1") #  Fitted to match experimental discharge potential at 0.1 mA/cm2
 
 #No 7: TDPA oxidation at carbon surface
-#edge_reaction("TDPA+[elyte] + electron <=> TDPA[elyte]", [5e4, 0.0, (1e-6, 'kJ/mol')], rateCoeff = "exchangecurrentdensity", beta = 0.5, id="cathode-2")
-#edge_reaction("TDPA2+[elyte] + electron <=> TDPA+[elyte]", [5e4, 0.0, (1e-6, 'kJ/mol')], rateCoeff = "exchangecurrentdensity", beta = 0.5, id="cathode-3")
+edge_reaction("TDPA+[elyte] + electron <=> TDPA[elyte]", [5e4, 0.0, (1e-6, 'kJ/mol')], rateCoeff = "exchangecurrentdensity", beta = 0.5, id="cathode-2")
+edge_reaction("TDPA2+[elyte] + electron <=> TDPA+[elyte]", [5e4, 0.0, (1e-6, 'kJ/mol')], rateCoeff = "exchangecurrentdensity", beta = 0.5, id="cathode-3")
