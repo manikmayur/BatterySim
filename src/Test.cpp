@@ -16,7 +16,10 @@
 #include <array>
 using namespace std;
 
+// Sort string by length
 bool sortbystrlength(string lhs, string rhs) {return lhs.length() > rhs.length();}
+// Get message from stderr to log file
+std::string exec(const char* cmd);
 
 std::string exec(const char* cmd)
 {
@@ -47,20 +50,13 @@ std::string exec(const char* cmd)
 }
 
 int main() {
-	std::array<char, 512> buffer;
 	std::string result;
 	std::string res;
 	std::string command = "D:\\HSO\\EESSoftwareLibrary\\McDENIS\\cantera\\ctml_writer.exe D:\\HSO\\EESSoftwareLibrary\\McDENIS\\cantera\\Final_KokamSiMET_2018_ModVal_KraftwerkBatterie.cti 2>&1 >&2";
-	auto pipe = popen(command.c_str(), "r");
-	if (!pipe) throw std::runtime_error("popen() failed!");
-	while (!feof(pipe))
-	{
-		if (fgets(buffer.data(), 512, pipe) != nullptr)
-			result += buffer.data();
-	}
-	auto cti2xml_success = pclose(pipe);
+	auto cti2xml_success = exec(command.c_str());
 	std::cout <<"<>"<< result << std::endl;
-	/*std::vector<std::string> strVec;
+//
+	std::vector<std::string> strVec;
 	std::string string_original;
 	unsigned int pos;
 	strVec.push_back("e_anode");
@@ -71,7 +67,6 @@ int main() {
 	for(unsigned int n = 0; n < strVec.size(); n++)
 	{
 		string_original = strVec[n];
-		//pos = cmpStr.find(string_original);
 		if(cmpStr.find(string_original) != string::npos)
 		{
 			printf(
