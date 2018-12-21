@@ -1,0 +1,175 @@
+#=====================================================================================
+#****************************************************************************************************************
+# Cantera input file for PEMFC model by Daniel Gruebl 2018 - to be used in D. Grübl, W. G. Bessler, Electrochemical pressure impedance spectroscopy (EPIS) applied to polymer electrolyte membrane fuel cells: A model-based analysis, to be submitted 2018
+# 
+# parameterized and fitted to experimental setup of Engebretsen et al. Electrochemical pressure impedance spectroscopy applied to the study of polymer electrolyte fuel cells Electrochemistry Communications 75, pp. 60-63 (2017)
+#
+# This cti file is based on:
+#
+# Example CANTERA input file for PEFC simulations
+#
+# Wolfgang Bessler 03/2011
+#
+# Please use the following species name convention:
+# - Surface species: Specify surface with normal brackets, e.g. H(Pt), O--(YSZ), (Pt)
+# - Bulk species: Specify bulk with square brackets, e.g. O--[YSZ], H+[Nafion]
+# - Gas phase species: no further specification, e.g. N2, H2, O2
+# - An electron is just called electron
+#
+#=====================================================================================
+
+
+
+# These units will be used by default for any quantities entered
+# without units. Quantities with compound units (e.g. concentration)
+# will be constructed from these.
+#units(length = "cm", time = "s", quantity = "mol", act_energy = "kJ/mol")
+units(length = "m", time = "s", quantity = "mol", act_energy = "kJ/mol")
+
+# Turn on mechanism validation to detect unbalanced reactions, if any
+validate()
+
+
+
+#=====================================================================================
+#   Gas phases anode and cathode
+#=====================================================================================
+
+# These entries do not need to be modified. They represent the general case for all
+# 53 species present in the GRI mechanism. The species actually used in the simulation
+# are controlled via the .denis input file.
+
+
+# Anode
+# ------------------------------------------------------------------------------------
+ideal_gas(name = "gas_anode", #this name MUST NOT be changed, DENIS relies on it
+      elements = " O H N",
+      species = "gri30:H2 H2O", #this MUST NOT be changed. It is replaced by the real species list from the denis input file during execution of DENIS
+      reactions = "all",
+      kinetics = "GRI30",
+      transport = "Mix",
+      initial_state = state(temperature = 343.15, pressure = OneAtm,
+                                mole_fractions = 'H2:1.0, H2O:0.0'))
+
+# Cathode
+# ------------------------------------------------------------------------------------
+
+ideal_gas(name = "gas_cathode",  #this name MUST NOT be changed, DENIS relies on it
+      elements = " O H N ",
+      species = "gri30:O2 H2O N2", #this MUST NOT be changed. It is replaced by the real species list from the denis input file during execution of DENIS
+      reactions = "all",
+      kinetics = "GRI30",
+      transport = "Mix",
+      initial_state = state(temperature = 343.15, pressure = OneAtm,
+                                mole_fractions = 'O2:0.1647, H2O:0.2156, N2:0.6197'))
+
+
+#=====================================================================================
+#   Electrodes
+#=====================================================================================
+
+# Bulk platinum
+#------------------------------------------------------------------
+#
+#   This phase will be used for both electrodes. All we need is
+#   a source/sink for electrons, so we define this phase as only
+#   containing electrons.
+#	 The density is a dummy entry and is not needed for calculating the kinetics.
+
+metal(
+	name = "Platinum",
+	elements = "E",
+	species = "electron",
+   density = (2.145e4, 'kg/m3'),
+	initial_state = state( mole_fractions = 'electron:1.0')
+	)
+
+
+
+#  The electron is set to have zero enthalpy and entropy. Therefore,
+# the chemical potential of the electron is zero, and the
+# electrochemical potential is simply -F * phi, where phi is the
+# electric potential of the metal. Note that this simple model is
+# adequate only because all we require is a reservior for electrons;
+# if we wanted to do anything more complex, like carry out energy or
+# charge balances on the metal, then we would require a more complex
+# model. Note that there is no work function for this metal.
+
+species(name = "electron", atoms = "E:1", thermo = const_cp(h0 = (0.0, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))
+
+
+
+#=====================================================================================
+# Electrolyte
+#=====================================================================================
+
+# Nafion electrolyte
+#--------------------------------------------------------------------
+# Here we define the Nafion as bulk containing protons only.
+
+incompressible_solid(
+	name = "Nafion",
+	elements = "H E",
+	species = "H+[Nafion]",
+	density = (1.3, 'g/cm3'),  # dummy entry, value is not used
+	initial_state = state( mole_fractions = "H+[Nafion]:1.0")
+	)
+
+# An arbitrary value of -100 kJ/mol is used for the proton enthalpy for numerical stability reasons.
+species( name = "H+[Nafion]", atoms = "H:1 E:-1", 	thermo = const_cp(h0 = (-100.0, 'kJ/mol'),	s0 = (0.0, 'J/mol/K')))
+
+
+
+
+#=====================================================================================
+# Interfaces for electrochemical reactions
+#=====================================================================================
+
+# In CANTERA, electrochemical reactions always take place at interfaces (surfaces).
+# It is not possible to define an electrochemical reaction without defining an interface.
+# For global kinetics, the interface itself is not resolved and gets only dummy properties
+# (dummy species, dummy value for surface site density).
+# For elementary kinetics, the interface is an actual surface (e.g., metal/gasphase).
+# In this case, the full properties (surface species, surface site density etc.) need to be
+# specified.
+# All the phases with which the interface is in contact need to be specified, as well as the reactions
+# taking place at this interface. The name of adjacent phases need to be identical in the .denis file.
+# When specifying interfacial reactions, note that electrochemical reactions need to be defined
+# as "edge_reaction", while normal surface reactions are defined as "surface_reaction".
+
+
+
+# Anode interface
+#--------------------------------------------------------------------
+
+ideal_interface(
+	name = "anode_reaction_surface",
+	phases = 'gas_anode Platinum Nafion',
+	reactions = ["PtAn-*"],
+	elements = " ",					# dummy entry for global kinetics
+	species = " (dummy) ",			# dummy entry for global kinetics
+	site_density = (1,'mol/cm2'),	# dummy entry for global kinetics
+	)
+
+edge_reaction("H2 <=> 2 H+[Nafion] + 2 electron", [1e57, 0.0, (299.999999, 'kJ/mol')], beta = 0.5, id="PtAn-global")  
+
+
+
+# Cathode interface
+#--------------------------------------------------------------------
+
+ideal_interface(
+	name = "cathode_reaction_surface",
+	phases = 'gas_cathode Platinum Nafion',
+	reactions = ["PtCa-*"],
+	elements = " ",					# dummy entry for global kinetics
+	species = " (dummy) ",			# dummy entry for global kinetics
+	site_density = (1,'mol/cm2'),	# dummy entry for global kinetics
+	)
+
+
+edge_reaction("4 H+[Nafion] + O2 + 4 electron <=> 2 H2O", [2e46, 0.0, (300.0, 'kJ/mol')], rateCoeff = "", beta = 0.13, id = 'PtCa-global')
+
+
+# Dummy species needed for global electrochemistry
+species( name = "(dummy)", atoms = "", thermo = const_cp(h0 = (0.0, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))

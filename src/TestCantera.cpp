@@ -8,6 +8,7 @@
 
 #include <cantera/thermo/BinarySolutionTabulatedThermo.h>
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <sstream>
 #include "cantera/thermo/ThermoFactory.h"
@@ -30,7 +31,10 @@ void writeRxnPathDiagram(double time, ReactionPathBuilder& b,
 void thermoTestSPM(std::string inFile);
 void printThermoReactionO2(std::string inFile);
 void printThermoReactionTDPA(std::string inFile);
+void printThermoReactionLi2O2(std::string inFile);
 void printThermoReactionLi(std::string inFile);
+void printThermoReactionPEM(std::string inFile);
+void printThermoKinetics(std::string inFile, std::string surfName, std::vector<ThermoPhase*> phaseList, double T, double P);
 
 int main() {
     std::string inFile;
@@ -42,9 +46,12 @@ int main() {
         //thermoInitCathodePhases(inFile);
         //thermoTestSPM(inFile);
         //thermoInitReactionROP_demo(inFile);
-        //printThermoReactionO2("cantera\/Work_LiO2_organic_LiBaLu_CV_TDPA.xml");
-        //printThermoReactionTDPA("cantera\/Work_LiO2_organic_LiBaLu_CV_TDPA.xml");
-        printThermoReactionLi("cantera\/Work_LiO2_organic_LiBaLu_CV_TDPA.xml");
+        //printThermoReactionO2("cantera\/Work_LiO2_organic_LiBaLu_CV_TDPA.cti");
+        //printThermoReactionLi2O2("cantera\/Work_LiO2_organic_LiBaLu_CV_TDPA.cti");
+        //printThermoReactionLi2O2("cantera\/Work_LiO2_organic_LiBaLu_November_2M_parallel_reactions.cti");
+        //printThermoReactionTDPA("cantera\/Work_LiO2_organic_LiBaLu_CV_TDPA.cti");
+        printThermoReactionLi("cantera\/Work_LiO2_organic_LiBaLu_CV_TDPA.cti");
+        //printThermoReactionPEM("cantera\/Final_Gruebl_2018_PEMFC_origin.cti");
         //thermoInitElectrolyte_demo(inFile);
         //simple_demo2();
     }
@@ -441,77 +448,99 @@ void printThermoReactionTDPA(std::string inFile) {
         ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
         std::vector<ThermoPhase*> phaseList;
         phaseList.push_back(tp1);
-        //phaseList.push_back(tp3);
-        //phaseList.push_back(tp4);
         phaseList.push_back(tp2);
-        Interface surf(inFile, surfName, phaseList);
         // Set phase standard state
         for (size_t k = 0; k < phaseList.size(); k++) {
             phaseList[k]->setState_TP(T,P);
         }
-        surf.setState_TP(T,P);
-        double mmu0;
-        std::cout<<"\nPrinting species thermodynamics..."<<std::endl;
-        for (size_t k = 0; k < surf.nPhases(); k++) {
-            std::cout << "Name: "<<surf.thermo(k).name()<<" #Species: "<< surf.thermo(k).nSpecies()
-            		<<" density: "<<surf.thermo(k).density()
-					<<" Epot: "<<surf.thermo(k).electricPotential()
-					<<std::endl;
-            vector_fp mu0(surf.thermo(k).nSpecies());
-            vector_fp mu(surf.thermo(k).nSpecies());
-            vector_fp h0(surf.thermo(k).nSpecies());
-            vector_fp s0(surf.thermo(k).nSpecies());
-            vector_fp ac(surf.thermo(k).nSpecies());
+        printThermoKinetics(inFile, surfName, phaseList, T, P);
+    } catch (CanteraError& err){
+        std::cout<<err.what()<< std::endl;
+    }
+}
 
-            surf.thermo(k).getStandardChemPotentials(mu0.data());
-            surf.thermo(k).getChemPotentials(mu.data());
-            surf.thermo(k).getActivityConcentrations(ac.data());
+void printThermoReactionLi2O2(std::string inFile) {
+    //std::string surfName[] = {"Li2O2_surface_RM", "Li2O2_precipitation_from_solution",
+    		//"Li2O2_precipitation_surface", "LiO2_precipitation", "Li2O2_surface"};
+    std::string surfName[] = {"C_surface", "O_surface", "Li2O2_surface"};
+    double T=298.15;
+    double P=101325;
+	std::vector<ThermoPhase*> phaseList;
+    try {
+    	for (size_t i=0; i<surfName->size(); i++)
+    	{
+    		if (surfName[i] == "O_surface")
+    		{
+    			std::cout<<"Printing "<<surfName[i]<<std::endl;
+    			phaseList.clear();
+    			ThermoPhase* tp1 = (newPhase(inFile,"gas_cathode"));
+    			ThermoPhase* tp2 = (newPhase(inFile,"elyte"));
+    			phaseList.push_back(tp1);
+    			phaseList.push_back(tp2);
+    		}
+    		if (surfName[i] == "Li2O2_surface_RM")
+    		{
+    			std::cout<<"Printing "<<surfName[i]<<std::endl;
+    			phaseList.clear();
+    			ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
+    			ThermoPhase* tp2 = (newPhase(inFile,"Li2O2"));
+    			ThermoPhase* tp3 = (newPhase(inFile,"conductor"));
+    			phaseList.push_back(tp1);
+    			phaseList.push_back(tp2);
+    			phaseList.push_back(tp3);
+    		}
+    		if (surfName[i] == "Li2O2_precipitation_from_solution")
+    		{
+    			std::cout<<"Printing "<<surfName[i]<<std::endl;
+    			phaseList.clear();
+    			ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
+    			ThermoPhase* tp2 = (newPhase(inFile,"Li2O2"));
+    			phaseList.push_back(tp1);
+    			phaseList.push_back(tp2);
+    		}
+    		if (surfName[i] == "Li2O2_precipitation_surface")
+    		{
+    			std::cout<<"Printing "<<surfName[i]<<std::endl;
+				phaseList.clear();
+    			ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
+    			ThermoPhase* tp2 = (newPhase(inFile,"LiO2"));
+    			ThermoPhase* tp3 = (newPhase(inFile,"Li2O2"));
+    			phaseList.push_back(tp1);
+    			phaseList.push_back(tp2);
+    			phaseList.push_back(tp3);
+    		}
+    		if (surfName[i] == "LiO2_precipitation")
+    		{
+    			std::cout<<"Printing "<<surfName[i]<<std::endl;
+				phaseList.clear();
+    			ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
+    			ThermoPhase* tp2 = (newPhase(inFile,"LiO2"));
+    			ThermoPhase* tp3 = (newPhase(inFile,"conductor"));
+    			phaseList.push_back(tp1);
+    			phaseList.push_back(tp2);
+    			phaseList.push_back(tp3);
+    		}
+    		if (surfName[i] == "Li2O2_surface")
+    		{
+    			std::cout<<"Printing "<<surfName[i]<<std::endl;
+				phaseList.clear();
+    			ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
+    			ThermoPhase* tp2 = (newPhase(inFile,"Li2O2"));
+    			ThermoPhase* tp3 = (newPhase(inFile,"conductor"));
+    			phaseList.push_back(tp1);
+    			phaseList.push_back(tp2);
+    			phaseList.push_back(tp3);
+    		}
+    		else
+    			continue;
+    		// Set phase standard state
+    		std::cout<<"Setting phase standard state... "<<std::endl;
+    		for (size_t k = 0; k < phaseList.size(); k++) {
+    			phaseList[k]->setState_TP(T,P);
+    		}
+    		printThermoKinetics(inFile, surfName[i], phaseList, T, P);
+    	}
 
-            for (size_t kk = 0; kk < surf.thermo(k).nSpecies(); kk++) {
-                mmu0 = mu0[kk] + Faraday * surf.thermo(k).electricPotential()*surf.thermo(k).charge(kk);
-                //mmu0 -= surf.thermo(0).RT() * surf.thermo(k).logStandardConc(k);
-                std::cout <<"Species: "<< surf.thermo(k).speciesName(kk)
-                        <<" : c0 = "<<surf.thermo(k).standardConcentration(kk)<<" : c = "<<surf.thermo(k).concentration(kk)
-                        <<" : ac = "<< ac[kk]
-                        <<" mmu0: "<<mmu0<<" mu0: "<<mu0[kk]<<" mu: "<<mu[kk]<<" h0: "<<h0[kk]*GasConstant*T
-                        <<" s0: "<<s0[kk]*GasConstant<<" mu0_calc=h0-T*s0: " <<h0[kk]*GasConstant*T-T*s0[kk]*GasConstant<<std::endl;
-            }
-            std::cout<<std::endl;
-        }
-        // Reaction thermodynamics
-        std::cout<<"Printing reaction thermodynamics..."<<std::endl;
-        vector_fp dG0(surf.nReactions());
-        vector_fp dG(surf.nReactions());
-        vector_fp dH(surf.nReactions());
-        vector_fp dS(surf.nReactions());
-        vector_fp kc(surf.nReactions());
-        vector_fp fdot(surf.nReactions());
-        vector_fp rdot(surf.nReactions());
-        vector_fp frop(surf.nReactions());
-        vector_fp rrop(surf.nReactions());
-        surf.getDeltaSSGibbs(dG0.data());
-        surf.getDeltaGibbs(dG.data());
-        //surf.getDeltaEnthalpy(dH.data());
-        //surf.getDeltaEntropy(dS.data());
-        surf.getEquilibriumConstants(kc.data());
-        surf.getFwdRateConstants(fdot.data());
-        surf.getRevRateConstants(rdot.data());
-        surf.getFwdRatesOfProgress(frop.data());
-        surf.getRevRatesOfProgress(rrop.data());
-        for (size_t k = 0; k < surf.nReactions(); k++) {
-            std::cout<<"No: "<<k<<" "<<surf.reactionString(k)<<std::endl;
-            std::cout<<"dG(J/kmol)= "<<dG[k]<<" dG0(J/kmol)= "<<dG0[k]<<std::endl;
-            std::cout<<"dH(J/kmol)= "<<dH[k]<<" dS(J/(kmol.K))= "<<dS[k]<<std::endl;
-            std::cout<<"G_cal(J/kmol)=dH-TdS= " <<dH[k]-T*dS[k]<<std::endl;
-            std::cout<<"Keq = " <<kc[k]<<" K_cal=c0P/c0R*exp(-dG/RT)= "<<tp2->standardConcentration(0)/tp1->standardConcentration(0)*(std::exp(-dG[k]/(GasConstant*T)));
-            std::cout<<"K_cal=c0P/c0R*exp(-dG0/RT)= "<<tp2->standardConcentration(0)/tp1->standardConcentration(0)*(std::exp(-dG0[k]/(GasConstant*T)))<<std::endl;
-            std::cout<<"fdot = "<< fdot[k] << " frop = " << frop[k] << " rdot = " << rdot[k] << " rrop = " << rrop[k] << " Keq = " << fdot[k]/rdot[k]<< std::endl;
-        }
-        vector_fp wdot(surf.nTotalSpecies());
-        surf.getNetProductionRates(wdot.data());
-        std::cout<<"Printing species ROP..."<<std::endl;
-        for (size_t kk = 0; kk < surf.nTotalSpecies(); kk++)
-            std::cout << surf.kineticsSpeciesName(kk)<< " wdot = " << wdot[kk]<<std::endl;
     } catch (CanteraError& err){
         std::cout<<err.what()<< std::endl;
     }
@@ -534,72 +563,7 @@ void printThermoReactionO2(std::string inFile) {
             phaseList[k]->setState_TP(T,P);
         }
         surf.setState_TP(T,P);
-        vector_fp c(phaseList[0]->nSpecies());
-        vector_fp x(phaseList[0]->nSpecies());
-        //tp2->setPressure(P*1.958);
-
-        for (size_t k = 0; k < phaseList[0]->nSpecies(); k++) {
-                    std::cout << "Name: "<<phaseList[0]->speciesName(k)<<" x: "<< x[k]<<std::endl;
-        }
-        double mmu0;
-        std::cout<<"\nPrinting species thermodynamics..."<<std::endl;
-        for (size_t k = 0; k < surf.nPhases(); k++) {
-            std::cout << "Name: "<<surf.thermo(k).name()<<" #Species: "<< surf.thermo(k).nSpecies()<<" density: "<<surf.thermo(k).density()<<std::endl;
-            vector_fp mu0(surf.thermo(k).nSpecies());
-            vector_fp mu(surf.thermo(k).nSpecies());
-            vector_fp h0(surf.thermo(k).nSpecies());
-            vector_fp s0(surf.thermo(k).nSpecies());
-            vector_fp ac(surf.thermo(k).nSpecies());
-            surf.thermo(k).getStandardChemPotentials(mu0.data());
-            surf.thermo(k).getChemPotentials(mu.data());
-            surf.thermo(k).getEnthalpy_RT(h0.data());
-            surf.thermo(k).getEntropy_R(s0.data());
-            surf.thermo(k).getActivityConcentrations(ac.data());
-            for (size_t kk = 0; kk < surf.thermo(k).nSpecies(); kk++) {
-                mmu0 = mu0[kk] + Faraday * surf.thermo(k).electricPotential()*surf.thermo(k).charge(kk);
-                mmu0 -= surf.thermo(0).RT() * surf.thermo(k).logStandardConc(k);
-                std::cout <<"Species: "<< surf.thermo(k).speciesName(kk)
-                        <<" : c0 = "<<surf.thermo(k).standardConcentration(kk)<<" : c = "<<surf.thermo(k).concentration(kk)
-                        <<" : ac = "<< ac[kk]
-                        <<" mmu0: "<<mmu0<<" mu0: "<<mu0[kk]<<" mu: "<<mu[kk]<<" h0: "<<h0[kk]*GasConstant*T
-                        <<" s0: "<<s0[kk]*GasConstant<<" mu0_calc=h0-T*s0: " <<h0[kk]*GasConstant*T-T*s0[kk]*GasConstant<<std::endl;
-            }
-            std::cout<<std::endl;
-        }
-        // Reaction thermodynamics
-        std::cout<<"Printing reaction thermodynamics..."<<std::endl;
-        vector_fp dG0(surf.nReactions());
-        vector_fp dG(surf.nReactions());
-        vector_fp dH(surf.nReactions());
-        vector_fp dS(surf.nReactions());
-        vector_fp kc(surf.nReactions());
-        vector_fp fdot(surf.nReactions());
-        vector_fp rdot(surf.nReactions());
-        vector_fp frop(surf.nReactions());
-        vector_fp rrop(surf.nReactions());
-        surf.getDeltaSSGibbs(dG0.data());
-        surf.getDeltaGibbs(dG.data());
-        //surf.getDeltaEnthalpy(dH.data());
-        //surf.getDeltaEntropy(dS.data());
-        surf.getEquilibriumConstants(kc.data());
-        surf.getFwdRateConstants(fdot.data());
-        surf.getRevRateConstants(rdot.data());
-        surf.getFwdRatesOfProgress(frop.data());
-        surf.getRevRatesOfProgress(rrop.data());
-        for (size_t k = 0; k < surf.nReactions(); k++) {
-            std::cout<<"No: "<<k<<" "<<surf.reactionString(k)<<std::endl;
-            std::cout<<"dG(J/kmol)= "<<dG[k]<<" dG0(J/kmol)= "<<dG0[k]<<std::endl;
-            std::cout<<"dH(J/kmol)= "<<dH[k]<<" dS(J/(kmol.K))= "<<dS[k]<<std::endl;
-            std::cout<<"G_cal(J/kmol)=dH-TdS= " <<dH[k]-T*dS[k]<<std::endl;
-            std::cout<<"Keq = " <<kc[k]<<" K_cal=c0P/c0R*exp(-dG/RT)= "<<tp2->standardConcentration(0)/tp1->standardConcentration(0)*(std::exp(-dG[k]/(GasConstant*T)));
-            std::cout<<" K_cal=c0P/c0R*exp(-dG0/RT)= "<<tp2->standardConcentration(0)/tp1->standardConcentration(0)*(std::exp(-dG0[k]/(GasConstant*T)))<<std::endl;
-            std::cout<<std::endl;
-        }
-        vector_fp wdot(surf.nTotalSpecies());
-        surf.getNetProductionRates(wdot.data());
-        std::cout<<"Printing species ROP..."<<std::endl;
-        for (size_t kk = 0; kk < surf.nTotalSpecies(); kk++)
-            std::cout << surf.kineticsSpeciesName(kk)<< " wdot = " << wdot[kk] << " fdot ="<< fdot[kk] << " frop = " << frop[kk] << " rdot = " << rdot[kk] << " rrop = " << rrop[kk] << " Keq = " << fdot[kk]/rdot[kk]<< std::endl;
+        printThermoKinetics(inFile, surfName, phaseList, T, P);
     } catch (CanteraError& err){
         std::cout<<err.what()<< std::endl;
     }
@@ -623,71 +587,111 @@ void printThermoReactionLi(std::string inFile) {
         for (size_t k = 0; k < phaseList.size(); k++) {
             phaseList[k]->setState_TP(T,P);
         }
-        surf.setState_TP(T,P);
-
-        double mmu0;
-        std::cout<<"\nPrinting species thermodynamics..."<<std::endl;
-        for (size_t k = 0; k < surf.nPhases(); k++) {
-            std::cout << "Name: "<<surf.thermo(k).name()<<" #Species: "<< surf.thermo(k).nSpecies()
-            		<<" density: "<<surf.thermo(k).density()
-					<<" Epot: "<<surf.thermo(k).electricPotential() <<std::endl;
-            vector_fp mu0(surf.thermo(k).nSpecies());
-            vector_fp mu(surf.thermo(k).nSpecies());
-            vector_fp h0(surf.thermo(k).nSpecies());
-            vector_fp s0(surf.thermo(k).nSpecies());
-            vector_fp ac(surf.thermo(k).nSpecies());
-            surf.thermo(k).getStandardChemPotentials(mu0.data());
-            surf.thermo(k).getChemPotentials(mu.data());
-            surf.thermo(k).getEnthalpy_RT(h0.data());
-            surf.thermo(k).getEntropy_R(s0.data());
-            surf.thermo(k).getActivityConcentrations(ac.data());
-            surf.thermo(1).setElectricPotential(1);
-
-            for (size_t kk = 0; kk < surf.thermo(k).nSpecies(); kk++) {
-                mmu0 = mu0[kk] + Faraday * surf.thermo(k).electricPotential()*surf.thermo(k).charge(kk);
-                mmu0 -= surf.thermo(0).RT() * surf.thermo(k).logStandardConc(k);
-                std::cout <<"Species: "<< surf.thermo(k).speciesName(kk)
-                        <<" : c0 = "<<surf.thermo(k).standardConcentration(kk)<<" : c = "<<surf.thermo(k).concentration(kk)
-                        <<" : ac = "<< ac[kk]
-                        <<" mmu0: "<<mmu0<<" mu0: "<<mu0[kk]<<" mu: "<<mu[kk]<<" h0: "<<h0[kk]*GasConstant*T
-                        <<" s0: "<<s0[kk]*GasConstant<<" mu0_calc=h0-T*s0: " <<h0[kk]*GasConstant*T-T*s0[kk]*GasConstant<<std::endl;
-            }
-            std::cout<<std::endl;
-        }
-        // Reaction thermodynamics
-        std::cout<<"Printing reaction thermodynamics..."<<std::endl;
-        vector_fp dG0(surf.nReactions());
-        vector_fp dG(surf.nReactions());
-        vector_fp dH(surf.nReactions());
-        vector_fp dS(surf.nReactions());
-        vector_fp kc(surf.nReactions());
-        vector_fp fdot(surf.nReactions());
-        vector_fp rdot(surf.nReactions());
-        vector_fp frop(surf.nReactions());
-        vector_fp rrop(surf.nReactions());
-        surf.getDeltaSSGibbs(dG0.data());
-        surf.getDeltaGibbs(dG.data());
-        surf.getEquilibriumConstants(kc.data());
-        surf.getFwdRateConstants(fdot.data());
-        surf.getRevRateConstants(rdot.data());
-        surf.getFwdRatesOfProgress(frop.data());
-        surf.getRevRatesOfProgress(rrop.data());
-        for (size_t k = 0; k < surf.nReactions(); k++) {
-            std::cout<<"No: "<<k<<" "<<surf.reactionString(k)<<" Type:"<<surf.reactionType(k)<<std::endl;
-            std::cout<<"dG(J/kmol)= "<<dG[k]<<" dG0(J/kmol)= "<<dG0[k]<<std::endl;
-            std::cout<<"dH(J/kmol)= "<<dH[k]<<" dS(J/(kmol.K))= "<<dS[k]<<std::endl;
-            std::cout<<"G_cal(J/kmol)=dH-TdS= " <<dH[k]-T*dS[k]<<std::endl;
-            std::cout<<"Keq = " <<kc[k]<<" K_cal=exp(-dG0/RT)= "<<std::exp(-dG0[k]/(GasConstant*T));
-            std::cout<<" K_cal=c0P/c0R*exp(-dG0/RT)= "<<tp2->standardConcentration(0)/tp1->standardConcentration(0)*(std::exp(-dG0[k]/(GasConstant*T)))<<std::endl;
-            std::cout<<"kf = "<< fdot[k] << " frop = " << frop[k] << " kr = " << rdot[k] << " rrop = " << rrop[k] << " Keq = kf/kr = " << fdot[k]/rdot[k]<< std::endl;
-            std::cout<<std::endl;
-        }
-        vector_fp wdot(surf.nTotalSpecies());
-        surf.getNetProductionRates(wdot.data());
-        std::cout<<"Printing species ROP..."<<std::endl;
-        for (size_t kk = 0; kk < surf.nTotalSpecies(); kk++)
-            std::cout << surf.kineticsSpeciesName(kk)<< " wdot = " << wdot[kk] <<std::endl;
+        std::cout<<tp3->speciesIndex("electron")<<std::endl;
+        printThermoKinetics(inFile, surfName, phaseList, T, P);
     } catch (CanteraError& err){
         std::cout<<err.what()<< std::endl;
     }
+}
+
+void printThermoReactionPEM(std::string inFile) {
+    std::string surfName;
+    double T=343.15;
+    double P=101325;
+    try {
+        surfName = "cathode_reaction_surface";
+        ThermoPhase* tp1 = (newPhase(inFile,"gas_cathode"));
+        ThermoPhase* tp2 = (newPhase(inFile,"Platinum"));
+        ThermoPhase* tp3 = (newPhase(inFile,"Nafion"));
+        std::vector<ThermoPhase*> phaseList;
+        phaseList.push_back(tp1);
+        phaseList.push_back(tp2);
+        phaseList.push_back(tp3);
+        Interface surf(inFile, surfName, phaseList);
+        // Set phase standard state
+        for (size_t k = 0; k < phaseList.size(); k++) {
+            phaseList[k]->setState_TP(T,P);
+        }
+        printThermoKinetics(inFile, surfName, phaseList, T, P);
+
+    } catch (CanteraError& err){
+        std::cout<<err.what()<< std::endl;
+    }
+}
+
+void printThermoKinetics(std::string inFile, std::string surfName, std::vector<ThermoPhase*> phaseList, double T, double P) {
+
+    Interface surf(inFile, surfName, phaseList);
+    surf.setState_TP(T,P);
+    // Phase thermodynamics
+    std::cout<<"\nPrinting species thermodynamics..."<<std::endl;
+    for (size_t k = 0; k < surf.nPhases(); k++) {
+        std::cout << "Name: "<<surf.thermo(k).name()<<" #Species: "<< surf.thermo(k).nSpecies()
+        		<<" density: "<<surf.thermo(k).density()
+				<<" Epot: "<<surf.thermo(k).electricPotential() <<std::endl;
+        vector_fp mu0(surf.thermo(k).nSpecies());
+        vector_fp muE(surf.thermo(k).nSpecies());
+        vector_fp mu(surf.thermo(k).nSpecies());
+        vector_fp h0(surf.thermo(k).nSpecies());
+        vector_fp s0(surf.thermo(k).nSpecies());
+        vector_fp ac(surf.thermo(k).nSpecies());
+        surf.thermo(k).getStandardChemPotentials(mu0.data());
+        surf.thermo(k).getElectrochemPotentials(muE.data());
+        surf.thermo(k).getChemPotentials(mu.data());
+        surf.thermo(k).getEnthalpy_RT(h0.data());
+        surf.thermo(k).getEntropy_R(s0.data());
+        surf.thermo(k).getActivityConcentrations(ac.data());
+        surf.thermo(1).setElectricPotential(0);
+        double mmu0;
+        for (size_t kk = 0; kk < surf.thermo(k).nSpecies(); kk++) {
+            mmu0 = mu0[kk] + Faraday * surf.thermo(k).electricPotential()*surf.thermo(k).charge(kk);
+            mmu0 -= surf.thermo(0).RT() * surf.thermo(k).logStandardConc(kk);
+            std::cout<<std::setprecision (15)<<"Species: "<< surf.thermo(k).speciesName(kk)
+                     <<", c0 (kmol/m3) = "<<surf.thermo(k).standardConcentration(kk)<<", c (kmol/m3) = "<<surf.thermo(k).concentration(kk)
+                     <<", ac (kmol/m3) = "<< ac[kk]<<", mu (J/mol) = "<<mmu0/1e3
+                     <<", mu0 (J/mol) = "<<mu0[kk]/1e3<<", muE (J/mol) = "<<muE[kk]/1e3<<" h0 (J/mol): "<< h0[kk]*GasConstant*T/1e3
+                     <<" s0 (J/mol/K): "<<s0[kk]*GasConstant/1e3<<std::endl;
+        }
+        std::cout<<std::endl;
+    }
+
+    // Reaction thermodynamics
+    std::cout<<surf.report();
+    std::cout<<"Printing reaction thermodynamics..."<<std::endl;
+    vector_fp dG0(surf.nReactions());
+    vector_fp dG(surf.nReactions());
+    vector_fp dmu(surf.nReactions());
+    /*vector_fp dH(surf.nReactions());
+    vector_fp dS(surf.nReactions());*/
+    vector_fp kc(surf.nReactions());
+    vector_fp fdot(surf.nReactions());
+    vector_fp rdot(surf.nReactions());
+    vector_fp frop(surf.nReactions());
+    vector_fp rrop(surf.nReactions());
+    /*surf.getDeltaSSGibbs(dG0.data());
+    surf.getDeltaGibbs(dG.data());
+    surf.getDeltaElectrochemPotentials(dmu.data());
+    surf.getDeltaEnthalpy(dH.data());
+    surf.getDeltaEntropy(dS.data());*/
+    surf.getEquilibriumConstants(kc.data());
+    surf.getFwdRateConstants(fdot.data());
+    surf.getRevRateConstants(rdot.data());
+    surf.getFwdRatesOfProgress(frop.data());
+    surf.getRevRatesOfProgress(rrop.data());
+    for (size_t k = 0; k < surf.nReactions(); k++) {
+        std::cout<<std::setprecision (15)<<"No: "<<k<<" "<<surf.reactionString(k)<<" Type:"<<surf.reactionType(k)<<"\n\n"
+        /*<<"dG(J/mol)= "<<dG[k]/1e3<<" dG0(J/mol)= "<<dG0[k]/1e3<<" dmu(J/mol)= "<<dmu[k]/1e3<<"\n"
+        <<"dH(J/mol)= "<<dH[k]/1e3<<" dS(J/(mol.K))= "<<dS[k]/1e3<<"\n"
+        <<"G_cal(J/mol)=dH-TdS= " <<1e3*(dH[k]-T*dS[k])<<"\n"
+        <<"Keq = " <<kc[k]<<" Keq_cal = exp(-dG0/RT) = "<<std::exp(-dG0[k]/(GasConstant*T))
+        <<" Keq_cal = exp(-dG/RT) = "<<std::exp(-dG[k]/(GasConstant*T))<<"\n"
+		<<" Keq_cal = exp(-dmu/RT) = "<<std::exp(-dmu[k]/(GasConstant*T))<<"\n"*/
+        <<"kf = "<< fdot[k] << " frop = " << frop[k] << " kr = " << rdot[k] << " rrop = " << rrop[k] << " Keq = kf/kr = " << fdot[k]/rdot[k]<< "\n\n";
+    }
+    vector_fp wdot(surf.nTotalSpecies());
+    surf.getNetProductionRates(wdot.data());
+    std::cout<<"Printing species ROP..."<<std::endl;
+    for (size_t kk = 0; kk < surf.nTotalSpecies(); kk++)
+        std::cout << surf.kineticsSpeciesName(kk)<< " wdot = " << wdot[kk] <<std::endl;
+
 }
