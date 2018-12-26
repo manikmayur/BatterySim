@@ -1,2 +1,9 @@
 /TestCantera/
 /TestIDSS/
+/TestC++/
+.settings/language.settings.xml
+.settings/org.eclipse.cdt.managedbuilder.core.prefs
+.settings/org.eclipse.cdt.managedbuilder.core.prefs
+*.prefs
+.settings/org.eclipse.cdt.managedbuilder.core.prefs
+.cproject
