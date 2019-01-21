@@ -1,0 +1,154 @@
+#######################   UNITS     ####################################
+
+units(length = "m", time = "s", quantity = "kmol", act_energy = "kJ/mol")
+
+####################### BULK PHASES ####################################
+
+#---------------------
+#---- ELECTROLYTE ----
+#---------------------
+
+# Electrolyte 1M LiTFSI in DMSO + Redox mediator
+# 1L Solution = 1154.165 g of material (from density)
+# 1M LiTFSI = 287.09g = 1mol
+# 1e-3M Ferrocene = 186.04e-3g = 1e-3mol
+# 2.1e-3M O2 = 0.0336g = 2.1e-3mol
+# 40e-6M O2- = 6.3960e-04g = 40e-6mol
+# DMSO = 1154.165-287.09-0.18604-0.0336-6.3960e-04 = 866.8547 = 11.095mol
+# Total mol = 1+1e-3+2.1e-3+40e-6+11.095 = 12.0981mol
+
+IdealSolidSolution(
+	name = "electrolyte",
+	elements = "C H O Li E F N S Fe",
+	species = "DMSO[elyte] Li+[elyte] TFSI-[elyte] Ferrocene[elyte] Ferrocene+[elyte]",
+	#density = (1154.165, 'kg/m3'),   # Density of 1M LiTFSI in DMSO at 25�C; calculated from Liu Zhang 2017 AdvEnergyMat Stabilization of Li Metal Anode in DMSO-Based Electrolytes via Optimization of Salt�Solvent Coordination for Li�O2 Batteries
+    standard_concentration = 'unity',
+    initial_state = state(mole_fractions = 'DMSO[elyte]:0.8472, Li+[elyte]:0.076362, TFSI-[elyte]:0.076362, Ferrocene[elyte]:0.076362e-03, Ferrocene+[elyte]:0.076362e-6'))
+
+#---------------------------
+#---- WORKING ELECTRODE ----
+#---------------------------
+
+metal(
+	name = "conductor",
+	elements = "E", 
+	species	= "electron",
+	density = (1,'kg/m3'),
+	initial_state = state( mole_fractions = 'electron:1.0' ))
+
+#-----------------------------------
+#---- WORKING ELECTRODE SURFACE ----
+#-----------------------------------
+
+ideal_interface(
+	name = "WE_surface",
+	elements = " ",
+	species	= "(dummy)",
+	reactions = "redox-*",
+	site_density = (2.50e-5,'mol/cm2'),
+	phases = "electrolyte conductor")
+
+#------------------------------------
+#---- WORKING ELECTRODE REACTION ----
+#------------------------------------
+
+#No 7: Ferrocene+ formation at carbon surface
+edge_reaction("Ferrocene+[elyte] + electron <=> Ferrocene[elyte]", [1e2, 0.0, (1e-6, 'kJ/mol')], rateCoeff = "exchangecurrentdensity", beta = 0.5, id="redox-1")  # kinetics fitted to cyclic voltammetry - B. J. Bergner, A. Schuermann, K. Peppler, A. Garsuch, and J. Janek, J. Am. Chem. Soc. 136, 15054-15064 (2014)
+
+#---------------------------
+#---- REFERENCE ELECTRODE ----
+#---------------------------
+metal(
+	name = "Li_metal",
+	elements = "Li", 
+	species	= "Li[metal]",
+	density = (534,'kg/m3'),
+	initial_state = state( mole_fractions = 'Li[metal]:1.0' ))
+
+#------------------------------------
+#---- REFERENCE ELECTRODE SURFACE----
+#------------------------------------
+
+ideal_interface(
+	name 		= "Li_surface",
+	elements 	= "",
+	species	= "(dummy)",
+	reactions	= "lithium-*",
+	site_density = (2.50e-6,'mol/cm2'),
+	phases	= "Li_metal electrolyte conductor"
+	)
+
+#------------------------------------
+#---- REFERENCE ELECTRODE REACTION ----
+#------------------------------------
+
+# No 0: Li metal anode reaction
+edge_reaction("Li+[elyte] + electron <=> Li[metal]", [1e0, 0.0, (1e-6, 'kJ/mol')], rateCoeff = "exchangecurrentdensity", beta = 0.5, id="lithium-1")    #set fast
+
+#----------------------------
+#---- SPECIES-DEFINITION ----
+#----------------------------
+
+# DMSO Molecular weight: 78.13 g/mol
+species(
+	name = "DMSO[elyte]",
+	atoms = "C:2, H:6, O:1, S:1",
+	thermo = const_cp(h0 = (0.0, 'kJ/mol'), s0 = (0.0, 'J/mol/K')),
+    standardState = constantIncompressible(molarVolume = (78.135040/1.15416, 'cm3/gmol')))
+
+# O2 Molecular weight: 31.99880 g/mol
+species(
+	name = "O2[elyte]",
+	atoms = "O:2",
+    thermo = const_cp(h0 = (-39.4674, 'kJ/mol'), s0 = (0, 'J/mol/K')),      # Fitted to O2 solubility of 2.1 mM/L (Uni Bonn 2.5 mM/L in pure DMSO - unpublished paper) in DMSO Sawyer et Tsuchiya: Effects of media and electrode materials on the electrochemical reduction of dioxygen
+    standardState = constantIncompressible(molarVolume = (31.99880/1.15416, 'cm3/gmol')))
+
+# Superoxide ion: O2-, MW: 31.998255 g/mol
+species(
+	name = "O2-[elyte]",
+	atoms = "O:2 E:1",
+    thermo = const_cp(h0 = (-22.835, 'kJ/mol'), s0 = (0, 'J/mol/K')),    # fitted to solubility of 40umol/l from Johnson, L.; Li, C.; Liu, Z.; Chen, Y.; Freunberger, S. A.; Ashok, P. C.; Praveen, B. B.; Dholakia, K.; Tarascon, J.-M.; Bruce, P. G. Nat. Chem. 2014, 6, 1091-1099.
+    standardState = constantIncompressible(molarVolume = (31.998255/1.15416, 'cm3/gmol')))
+
+# Lithium ion : Li+, MW: 6.940455 g/mol
+species(
+	name = "Li+[elyte]",
+	atoms = "Li:1, E:-1",
+    thermo = const_cp(h0 = (-278.49,'kJ/mol'), s0 = (13.4, 'J/mol/K')),      # Li+(aq) from Atkins, P. W. Physikalische Chemie. 4., vollst. ueberarb. Aufl. - Weinheim : Wiley-VCH (2006)
+    standardState = constantIncompressible(molarVolume = (6.940455/1.15416, 'cm3/gmol')))
+
+# TFSI Linear Formula: CF3SO2N-SO2CF3, Molecular Weight: 280.15 g/mol
+species(
+	name = "TFSI-[elyte]",
+	atoms = "C:2, F:6, N:1, O:4, S:2, E:1",
+	thermo = const_cp(h0 = (0.0, 'kJ/mol'), s0 = (0.0, 'J/mol/K')),
+    standardState = constantIncompressible(molarVolume = (280.15/1.15416, 'cm3/gmol')))
+
+# Ferrocene 186.04 g/mol
+species(
+	name = "Ferrocene[elyte]",
+	atoms = "C:10, H:10, Fe:1",
+    #thermo = const_cp(h0 = (-79.6, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))        #Calculated to reach redox reaction potential of 3.74 V aus B. J. Bergner, A. Schuermann, K. Peppler, A. Garsuch, and J. Janek, J. Am. Chem. Soc. 136, 15054-15064 (2014)
+    thermo = const_cp(h0 = (0, 'kJ/mol'), s0 = (0.0, 'J/mol/K')),        #Calculated to reach redox reaction potential of 3.74 V aus B. J. Bergner, A. Schuermann, K. Peppler, A. Garsuch, and J. Janek, J. Am. Chem. Soc. 136, 15054-15064 (2014)
+    standardState = constantIncompressible(molarVolume = (186.04/1.15416, 'cm3/gmol')))
+
+# Ferrocene+ 186.0395 g/mol
+species(
+	name = "Ferrocene+[elyte]",
+	atoms = "C:10, H:10, Fe:1, E:-1",
+	thermo = const_cp(h0 = (72.36, 'kJ/mol'), s0 = (0.0, 'J/mol/K')),            # Reference value
+    standardState = constantIncompressible(molarVolume = (186.0395/1.15416, 'cm3/gmol')))
+
+# Electron, MW: 0.000545 g/mol
+species(
+	name = "electron",
+	atoms = "E:1",
+	thermo = const_cp(h0 = (0.0, 'kcal/mol'), s0 = (0.0, 'J/mol/K')))
+
+species(
+    name = "Li[metal]",
+    atoms = "Li:1",
+    thermo = const_cp(h0 = (0, 'kJ/mol'), s0 = (29.12, 'J/mol/K')))
+
+# Dummy
+species( name = "(dummy)", atoms = "", thermo = const_cp(h0 = (0.0, 'kJ/mol'), s0 = (0.0, 'J/mol/K')))
