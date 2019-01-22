@@ -31,8 +31,6 @@
 #include <math.h>
 #include <string>
 
-#include "calc_itotCantera.h"
-
 #include <cvode/cvode.h>                 /* main integrator header file       */
 #include <cvode/cvode_spils.h>           /* access to CVSpils interface       */
 #include <sunlinsol/sunlinsol_spgmr.h>   /* access to SPGMR SUNLinearSolver   */
@@ -46,8 +44,7 @@
 #include <sunlinsol/sunlinsol_dense.h> /* access to dense SUNLinearSolver      */
 #include <cvode/cvode_direct.h>        /* access to CVDls interface            */
 #include "parameters_2s.h"
-
-
+#include "calc_itotCantera.h"
 
 /* Problem Constants */
 
@@ -55,10 +52,10 @@
 #define ONE  RCONST(1.0)
 #define TWO  RCONST(2.0)
 
-#define NUM_SPECIES  2                 /* number of species         */
+#define NUM_SPECIES  nSpecies                 /* number of species         */
 
 #define T0		ZERO                 /* initial time */
-#define NOUT	1000                   /* number of output times */
+#define NOUT	100                   /* number of output times */
 #define DT		RCONST(2*tp/NOUT)       /* number of seconds in two hours  */
 
 #define XMIN	ZERO                 /* grid boundaries in x  */
@@ -82,15 +79,15 @@
 #define USE_SPBCG   1
 #define USE_SPTFQMR 2
 
-/* User-defined vector and matrix accessor macros: IJKth, IJth */
+/* User-defined vector and matrix accessor macros: IJth, IJth */
 
-/* IJKth is defined in order to isolate the translation from the
+/* IJth is defined in order to isolate the translation from the
    mathematical 3-dimensional structure of the dependent variable vector
    to the underlying 1-dimensional storage. IJth is defined in order to
    write code which indexes into dense matrices with a (row,column)
    pair, where 1 <= row, column <= NUM_SPECIES.
 
-   IJKth(vdata,i,j,k) references the element in the vdata array for
+   IJth(vdata,i,j,k) references the element in the vdata array for
    species i at mesh point (j,k), where 1 <= i <= NUM_SPECIES,
    0 <= j <= MX-1, 0 <= k <= MY-1. The vdata array is obtained via
    the call vdata = N_VGetArrayPointer(v), where v is an N_Vector.
@@ -98,12 +95,13 @@
    contiguous within vdata.
  */
 
-#define IJKth(vdata,i,j) (vdata[i-1 + (j)*NUM_SPECIES])
+#define IJth(vdata,i,j) (vdata[i-1 + (j)*NUM_SPECIES])
 
 /* Type : UserData
    contains preconditioner blocks, pivot arrays, and problem constants */
 
-typedef struct {
+typedef struct
+{
 	realtype dx, hdcoA, hdcoB;
 } *UserData;
 
@@ -120,7 +118,7 @@ static int check_flag(void *flagvalue, const char *funcname, int opt);
 /* Functions Called by the Solver */
 
 static int f(realtype t, N_Vector u, N_Vector udot, void *user_data);
-static int calc_itot(realtype cA, realtype cB, realtype t, realtype &itot, realtype &phis);
+static int calc_itot(realtype cA, realtype cB, realtype t, realtype &itot, realtype phis);
 
 /* Main Program */
 
@@ -129,18 +127,19 @@ int main(void)
 	realtype abstol, reltol, t, tout;
 	N_Vector u;
 	UserData data;
-	SUNMatrix A;
+	//SUNMatrix A;
 	SUNLinearSolver LS;
 	void *cvode_mem;
 	int iout, flag;
-	realtype itot=0;
 
-	A = NULL;
+
+	//A = NULL;
 	u = NULL;
 	data = NULL;
 	LS = NULL;
 	cvode_mem = NULL;
-	try {
+	try
+	{
 		//printf("itot = %f, eta = %f", itot, eta);
 
 		/* Allocate memory, and set problem data, initial values, tolerances */
@@ -182,6 +181,9 @@ int main(void)
 		flag = CVSpilsSetLinearSolver(cvode_mem, LS);
 		if(check_flag(&flag, "CVSpilsSetLinearSolver", 1)) return 1;
 
+		/* Initialite Cantera */
+		initCantera();
+
 		// 2nd
 		/* Create dense SUNMatrix for use in linear solves */
 		//A = SUNDenseMatrix(NEQ, NEQ);
@@ -201,7 +203,8 @@ int main(void)
 		printf(" \n2-species diffusion problem\n\n");
 		FILE * pFile;
 		pFile = fopen ("myfile.txt","w");
-		for (iout=1, tout = DT; iout <= NOUT; iout++, tout += DT) {
+		for (iout=1, tout = DT; iout <= NOUT; iout++, tout += DT)
+		{
 			flag = CVode(cvode_mem, tout, u, &t, CV_NORMAL);
 			PrintOutput(cvode_mem, u, t, pFile);
 			if(check_flag(&flag, "CVode", 1)) break;
@@ -211,15 +214,15 @@ int main(void)
 
 		/* Free memory */
 		fclose (pFile);
-
+		Cantera::appdelete();
 		N_VDestroy(u);
 		FreeUserData(data);
 		CVodeFree(&cvode_mem);
 		SUNLinSolFree(LS);
-
 		return(0);
 	}
-	catch(std::exception &err){
+	catch(std::exception &err)
+	{
 		printf(err.what());
 	}
 }
@@ -261,9 +264,10 @@ static void SetInitialProfiles(N_Vector u, realtype dx)
 	udata = N_VGetArrayPointer(u);
 
 	/* Load initial profiles of cA and cB into u vector */
-	for (int jx=0; jx < MX; jx++) {
-		IJKth(udata,1,jx) = cA_bulk;
-		IJKth(udata,2,jx) = cB_bulk;
+	for (int jx=0; jx < MX; jx++)
+	{
+		IJth(udata,1,jx) = cA_bulk;
+		IJth(udata,2,jx) = cB_bulk;
 	}
 }
 
@@ -272,7 +276,7 @@ static void PrintOutput(void *cvode_mem, N_Vector u, realtype t, FILE *fp)
 {
 	long int nst;
 	int qu, flag;
-	realtype hu, *udata, phis=0.0, itot=0.0, rop[3];
+	realtype hu, *udata, itot=0.0, rop[3];
 	int mxh = MX/2 - 1, mx1 = MX - 1;
 
 	udata = N_VGetArrayPointer(u);
@@ -287,14 +291,13 @@ static void PrintOutput(void *cvode_mem, N_Vector u, realtype t, FILE *fp)
 	printf("t = %.2e   no. steps = %ld   order = %d   stepsize = %.2e\n",
 			t, nst, qu, hu);
 	printf("c1 (bot.left/middle/top rt.) = %12.3e  %12.3e  %12.3e\n",
-			IJKth(udata,1,0), IJKth(udata,1,mxh), IJKth(udata,1,mx1));
+			IJth(udata,1,0), IJth(udata,1,mxh), IJth(udata,1,mx1));
 	printf("c2 (bot.left/middle/top rt.) = %12.3e  %12.3e  %12.3e\n\n",
-			IJKth(udata,2,0), IJKth(udata,2,mxh), IJKth(udata,2,mx1));
-	//calc_itot(IJKth(udata,1,0), IJKth(udata,2,0), t, itot, phis);
-	phis = (t<=tp) ? v*t + E1 : -v*(t-tp) + E2;
-	calc_itotCantera2s(IJKth(udata,1,0), IJKth(udata,2,0), t, rop, phis);
+			IJth(udata,2,0), IJth(udata,2,mxh), IJth(udata,2,mx1));
+	//calc_itot(IJth(udata,1,0), IJth(udata,2,0), t, itot, Vcell(t));
+	calc_ropCantera2S(IJth(udata,1,0), IJth(udata,2,0), t, rop, Vcell(t));
 	itot = rop[2];
-	fprintf (fp, "%.2e %12.3e %12.3e %12.3e %12.3e\n",t, IJKth(udata,1,0), IJKth(udata,2,0), phis, itot);
+	fprintf (fp, "%.2e %12.3e %12.3e %12.3e %12.3e\n",t, IJth(udata,1,0), IJth(udata,2,0), Vcell(t), itot);
 
 }
 
@@ -392,7 +395,7 @@ static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
 	realtype cA, cB, cAlt, cBlt, cAl, cBl;
 	realtype cArt, cBrt, hordA, hordB;
 	realtype hordcoA, hordcoB;
-	realtype *udata, *dudata, itot, phis, rop[3];
+	realtype *udata, *dudata, itot, rop[3];
 	int jx;
 	UserData data;
 
@@ -404,12 +407,11 @@ static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
 	hordcoA  = data->hdcoA;
 	hordcoB  = data->hdcoB;
 
-	cAl = IJKth(udata,1,0);
-	cBl = IJKth(udata,2,0);
+	cAl = IJth(udata,1,0);
+	cBl = IJth(udata,2,0);
 
-	phis = (t<=tp) ? v*t + E1 : -v*(t-tp) + E2;
-	//calc_itot(cAl, cBl, t, itot, phis);
-	calc_itotCantera2s(cAl, cBl, t, rop, phis);
+	//calc_itot(cAl, cBl, t, itot, Vcell(t));
+	calc_ropCantera2S(cAl, cBl, t, rop, Vcell(t));
 	itot = rop[2]*Cantera::Faraday;
 
 	/* Loop over all grid points. */
@@ -417,8 +419,8 @@ static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
 	for (jx=0; jx < MX; jx++) {
 
 		/* Extract c1 and c2, and set kinetic rate terms. */
-		cA = IJKth(udata,1,jx);
-		cB = IJKth(udata,2,jx);
+		cA = IJth(udata,1,jx);
+		cB = IJth(udata,2,jx);
 		//if (cA<0 || cB<0) return(1);
 
 		/* Set horizontal diffusion terms. */
@@ -426,20 +428,20 @@ static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
 		 * At x = 0; Ddc/dx = Ri = -vi*itot/(n*F)
 		 * c_j+1 - c_j = -(dx/Di)*vi*itot/(n*F)
 		 * At x = L: u(L) = [cA0;cB0]
-		 * IJKth(vdata,i,j,k) references the element in the vdata array for
+		 * IJth(vdata,i,j,k) references the element in the vdata array for
 		 * species i at mesh point (j,k), where 1 <= i <= NUM_SPECIES,
 		 * 0 <= j <= MX-1, 0 <= k <= MY-1.
 		 */
 
-		cAlt = (jx == 0) ? IJKth(udata,1,0) + rop[0]/(DA)*data->dx : IJKth(udata,1,jx-1);
-		cBlt = (jx == 0) ? IJKth(udata,2,0) + rop[1]/(DB)*data->dx : IJKth(udata,2,jx-1);
-		//cAlt = (jx == 0) ? IJKth(udata,1,0) - vA*itot/(DA*F)*data->dx : IJKth(udata,1,jx-1);
-		//cBlt = (jx == 0) ? IJKth(udata,2,0) - vB*itot/(DB*F)*data->dx : IJKth(udata,2,jx-1);
-		cArt = (jx == MX-1) ? cA_bulk : IJKth(udata,1,jx+1);
-		cBrt = (jx == MX-1) ? cB_bulk : IJKth(udata,2,jx+1);
-		//DA/SUNSQR(data->dx) * ( IJKth(udata,1,jx+iright) - 2*IJKth(udata,1,jx) + IJKth(udata,1,jx+ileft))
+		cAlt = (jx == 0) ? IJth(udata,1,0) + rop[0]/(DA)*data->dx : IJth(udata,1,jx-1);
+		cBlt = (jx == 0) ? IJth(udata,2,0) + rop[1]/(DB)*data->dx : IJth(udata,2,jx-1);
+		//cAlt = (jx == 0) ? IJth(udata,1,0) - vA*itot/(DA*F)*data->dx : IJth(udata,1,jx-1);
+		//cBlt = (jx == 0) ? IJth(udata,2,0) - vB*itot/(DB*F)*data->dx : IJth(udata,2,jx-1);
+		cArt = (jx == MX-1) ? cA_bulk : IJth(udata,1,jx+1);
+		cBrt = (jx == MX-1) ? cB_bulk : IJth(udata,2,jx+1);
+		//DA/SUNSQR(data->dx) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
 		hordA = hordcoA*(cArt - TWO*cA + cAlt);
-		//DB/SUNSQR(data->dx) * ( IJKth(udata,1,jx+iright) - 2*IJKth(udata,1,jx) + IJKth(udata,1,jx+ileft))
+		//DB/SUNSQR(data->dx) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
 		hordB = hordcoB*(cBrt - TWO*cB + cBlt);
 
 		/* Load all terms into udot. */
@@ -447,18 +449,18 @@ static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
 		 * dci/dt = Di*(c1rt - TWO*c1 + c1lt)/dx2
 		 * */
 
-		IJKth(dudata, 1, jx) = hordA ;
-		IJKth(dudata, 2, jx) = hordB ;
+		IJth(dudata, 1, jx) = hordA ;
+		IJth(dudata, 2, jx) = hordB ;
 	}
 
 	return(0);
 }
 
-static int calc_itot(realtype cA, realtype cB, realtype t, realtype &itot, realtype &phis) {
+static int calc_itot(realtype cA, realtype cB, realtype t, realtype &itot, realtype phis)
+{
 	realtype eta= 0.0, iloc = 0.0;
 
 	// Set voltage ramp
-	phis = (t<=tp) ? v*t + E1 : -v*(t-tp) + E2;
 	eta = phis-Eeq;
 	//         idl = (t<=tp)*(v*Cdl)+(t>tp)*(-v*Cdl);
 	// Calculate Butler-Volmer current density

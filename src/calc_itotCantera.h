@@ -18,9 +18,7 @@
 #include "cantera/kinetics/importKinetics.h"
 #include "parameters_2s.h"
 
-void calc_itotCantera2s(doublereal cA, doublereal cB, doublereal t, doublereal rop[nSpecies+1], doublereal phis);
-void calc_itotCantera3s(doublereal cA, doublereal cB, doublereal cC, doublereal t, doublereal &itot, doublereal phis);
-void thermoInitCathodeROP_demo(std::string xmlFile);
-
+void initCantera();
+void calc_ropCantera2S(doublereal cA, doublereal cB, doublereal t, doublereal rop[nSpecies+1], doublereal phis);
 
 #endif /* CALC_ITOTCANTERA_H_ */
