@@ -295,9 +295,9 @@ static void PrintOutput(void *cvode_mem, N_Vector u, realtype t, FILE *fp)
 	printf("c2 (bot.left/middle/top rt.) = %12.3e  %12.3e  %12.3e\n\n",
 			IJth(udata,2,0), IJth(udata,2,mxh), IJth(udata,2,mx1));
 	//calc_itot(IJth(udata,1,0), IJth(udata,2,0), t, itot, Vcell(t));
-	calc_ropCantera2S(IJth(udata,1,0), IJth(udata,2,0), t, rop, Vcell(t));
+	calc_ropCantera2S(IJth(udata,1,MX-1), IJth(udata,2,MX-1), t, rop, Vcell(t));
 	itot = rop[2];
-	fprintf (fp, "%.2e %12.3e %12.3e %12.3e %12.3e\n",t, IJth(udata,1,0), IJth(udata,2,0), Vcell(t), itot);
+	fprintf (fp, "%.2e %12.3e %12.3e %12.3e %12.3e\n",t, IJth(udata,1,MX-1), IJth(udata,2,MX-1), Vcell(t), itot);
 
 }
 
@@ -392,8 +392,8 @@ static int check_flag(void *flagvalue, const char *funcname, int opt)
 /* f routine. Compute RHS function f(t,u). */
 static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
 {
-	realtype cA, cB, cAlt, cBlt, cAl, cBl;
-	realtype cArt, cBrt, hordA, hordB;
+	realtype cA, cB, cAlt, cBlt, cArt, cBrt;
+	realtype hordA, hordB;
 	realtype hordcoA, hordcoB;
 	realtype *udata, *dudata, itot, rop[3];
 	int jx;
@@ -407,11 +407,9 @@ static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
 	hordcoA  = data->hdcoA;
 	hordcoB  = data->hdcoB;
 
-	cAl = IJth(udata,1,0);
-	cBl = IJth(udata,2,0);
-
 	//calc_itot(cAl, cBl, t, itot, Vcell(t));
-	calc_ropCantera2S(cAl, cBl, t, rop, Vcell(t));
+	calc_ropCantera2S(IJth(udata,1,MX-1), IJth(udata,2,MX-1), t, rop, Vcell(t));
+
 	itot = rop[2]*Cantera::Faraday;
 
 	/* Loop over all grid points. */
@@ -433,12 +431,12 @@ static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
 		 * 0 <= j <= MX-1, 0 <= k <= MY-1.
 		 */
 
-		cAlt = (jx == 0) ? IJth(udata,1,0) + rop[0]/(DA)*data->dx : IJth(udata,1,jx-1);
-		cBlt = (jx == 0) ? IJth(udata,2,0) + rop[1]/(DB)*data->dx : IJth(udata,2,jx-1);
+		cAlt = (jx == 0) ? cA_bulk : IJth(udata,1,jx-1);
+		cBlt = (jx == 0) ? cB_bulk : IJth(udata,2,jx-1);
 		//cAlt = (jx == 0) ? IJth(udata,1,0) - vA*itot/(DA*F)*data->dx : IJth(udata,1,jx-1);
 		//cBlt = (jx == 0) ? IJth(udata,2,0) - vB*itot/(DB*F)*data->dx : IJth(udata,2,jx-1);
-		cArt = (jx == MX-1) ? cA_bulk : IJth(udata,1,jx+1);
-		cBrt = (jx == MX-1) ? cB_bulk : IJth(udata,2,jx+1);
+		cArt = (jx == MX-1) ? IJth(udata,1,MX-1) + rop[0]/(DA)*data->dx : IJth(udata,1,jx+1);
+		cBrt = (jx == MX-1) ? IJth(udata,2,MX-1) + rop[1]/(DB)*data->dx : IJth(udata,2,jx+1);
 		//DA/SUNSQR(data->dx) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
 		hordA = hordcoA*(cArt - TWO*cA + cAlt);
 		//DB/SUNSQR(data->dx) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
