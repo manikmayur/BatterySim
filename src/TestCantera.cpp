@@ -10,6 +10,8 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
+#include <vector>
+#include <fstream>
 #include <sstream>
 #include "cantera/thermo/ThermoFactory.h"
 #include "cantera/thermo/ThermoPhase.h"
@@ -18,23 +20,22 @@
 #include "cantera/kinetics/importKinetics.h"
 #include "cantera/Edge.h"
 #include "cantera/reactionpaths.h"
-
-
-using namespace Cantera;
+#include "calc_itotCantera.h"
 
 void thermoInitAnode_demo(std::string inFile);
 void thermoInitCathodePhases(std::string inFile);
 void thermoInitAnodeROP_demo(std::string inFile);
 void thermoInitRefdemo(std::string inFile);
-void writeRxnPathDiagram(double time, ReactionPathBuilder& b,
-        Kinetics& reaction, std::ostream& logfile, std::ostream& outfile);
+void writeRxnPathDiagram(double time, Cantera::ReactionPathBuilder& b,
+		Cantera::Kinetics& reaction, std::ostream& logfile, std::ostream& outfile);
 void thermoTestSPM(std::string inFile);
 void printThermoReactionO2(std::string inFile);
 void printThermoReactionTDPA(std::string inFile);
 void printThermoReactionLi2O2(std::string inFile);
 void printThermoReactionLi(std::string inFile);
 void printThermoReactionPEM(std::string inFile);
-void printThermoKinetics(std::string inFile, std::string surfName, std::vector<ThermoPhase*> phaseList, double T, double P);
+void printThermoReactionFerrocene(std::string inFile) ;
+void printThermoKinetics(std::string inFile, std::string surfName, std::vector<Cantera::ThermoPhase*> phaseList, double T, double P);
 
 int main() {
     std::string inFile;
@@ -50,12 +51,13 @@ int main() {
         //printThermoReactionLi2O2("cantera\/Work_LiO2_organic_LiBaLu_CV_TDPA.cti");
         //printThermoReactionLi2O2("cantera\/Work_LiO2_organic_LiBaLu_November_2M_parallel_reactions.cti");
         //printThermoReactionTDPA("cantera\/Work_LiO2_organic_LiBaLu_CV_TDPA.cti");
-        printThermoReactionLi("cantera\/Work_LiO2_organic_LiBaLu_CV_TDPA.cti");
+        //printThermoReactionLi("cantera\/Work_LiO2_organic_LiBaLu_CV_TDPA.cti");
         //printThermoReactionPEM("cantera\/Final_Gruebl_2018_PEMFC_origin.cti");
         //thermoInitElectrolyte_demo(inFile);
         //simple_demo2();
+    	printThermoReactionFerrocene("cantera\/Ferrocene_CV.xml");
     }
-    catch (CanteraError& err){
+    catch (Cantera::CanteraError& err){
         std::cout<<err.what()<< std::endl;
     }
     return 0;
@@ -71,11 +73,11 @@ void thermoInitAnode_demo(std::string inFile) {
     double minTemp, maxTemp, refPressure;
     int type = 0;
     try {
-        ThermoPhase* tp = (newPhase(inFile,"anode"));
-        BinarySolutionTabulatedThermo* Li_ion = dynamic_cast<BinarySolutionTabulatedThermo*> (tp);
+        Cantera::ThermoPhase* tp = (Cantera::newPhase(inFile,"anode"));
+        Cantera::BinarySolutionTabulatedThermo* Li_ion = dynamic_cast<Cantera::BinarySolutionTabulatedThermo*> (tp);
         Li_ion->setState_TP(T,P);
 
-        MultiSpeciesThermo& sp = Li_ion->speciesThermo();
+        Cantera::MultiSpeciesThermo& sp = Li_ion->speciesThermo();
         //size_t index = Li_ion->m_kk_mod;
         //type = sp.reportType(index);
 
@@ -102,14 +104,14 @@ void thermoInitAnode_demo(std::string inFile) {
     }
 }
 
-void printData(ThermoPhase* tp) {
+void printData(Cantera::ThermoPhase* tp) {
     double c[4];
     double minTemp, maxTemp, refPressure;
     double T=298.15;
-    vector_fp Xo(tp->nSpecies());
-    vector_fp G(tp->nSpecies());
-    vector_fp H(tp->nSpecies());
-    vector_fp S(tp->nSpecies());
+    Cantera::vector_fp Xo(tp->nSpecies());
+    Cantera::vector_fp G(tp->nSpecies());
+    Cantera::vector_fp H(tp->nSpecies());
+    Cantera::vector_fp S(tp->nSpecies());
     tp->getMoleFractions(Xo.data());
     tp->getGibbs_RT(G.data());
     tp->getEnthalpy_RT(H.data());
@@ -118,7 +120,7 @@ void printData(ThermoPhase* tp) {
         int type = tp->speciesThermo(k).reportType(k);
         tp->speciesThermo(k).reportParams(k,type,c,minTemp, maxTemp, refPressure);
         std::cout << tp->speciesName(k) <<" X= "<< Xo[k] <<" DH= " << c[1]<<" DS= " << c[2]<< std::endl;
-        std::cout << tp->speciesName(k) <<" DH= "<< H[k]*GasConstant*T <<" DS= " << S[k]*GasConstant<<" DG= " << G[k]*GasConstant*T<< std::endl;
+        std::cout << tp->speciesName(k) <<" DH= "<< H[k]*Cantera::GasConstant*T <<" DS= " << S[k]*Cantera::GasConstant<<" DG= " << G[k]*Cantera::GasConstant*T<< std::endl;
     }
 }
 
@@ -128,7 +130,7 @@ void thermoInitCathodePhases(std::string inFile) {
     double P=101325;
     double dG, dH, dS, dG0;
     try {
-        ThermoPhase* tp = (newPhase(inFile,"elyte"));
+    	Cantera::ThermoPhase* tp = (Cantera::newPhase(inFile,"elyte"));
         std::cout<<tp->report()<<std::endl;
         /*ThermoPhase* tp1 = (newPhase(inFile,"cathode"));
         //ThermoPhase* tp2 = (newPhase(inFile,"conductor"));
@@ -187,7 +189,7 @@ void thermoInitCathodePhases(std::string inFile) {
         }
 
         //}*/
-    } catch (CanteraError& err){
+    } catch (Cantera::CanteraError& err){
         std::cout<<err.what()<< std::endl;
     }
 }
@@ -203,17 +205,17 @@ void thermoInitAnodeROP_demo(std::string inFile) {
     double c[4];
     int type;
 
-    ThermoPhase* tp = (newPhase(inFile,"anode"));
-    ThermoPhase* tp1 = (newPhase(inFile,"electrolyte"));
-    ThermoPhase* tp2 = (newPhase(inFile,"electron"));
+    Cantera::ThermoPhase* tp = (Cantera::newPhase(inFile,"anode"));
+    Cantera::ThermoPhase* tp1 = (Cantera::newPhase(inFile,"electrolyte"));
+    Cantera::ThermoPhase* tp2 = (Cantera::newPhase(inFile,"electron"));
 
-    std::vector<ThermoPhase*> phaseList;
+    std::vector<Cantera::ThermoPhase*> phaseList;
 
     phaseList.push_back(tp);
     phaseList.push_back(tp1);
     phaseList.push_back(tp2);
 
-    Edge surf(inFile, "edge_anode_electrolyte", phaseList);
+    Cantera::Edge surf(inFile, "edge_anode_electrolyte", phaseList);
 
     //Interface surf(inFile, "edge_anode_electrolyte", phaseList);
     //Interface refSurf(inFile, "edge_lithium_electrolyte", refPhaseList);
@@ -223,7 +225,7 @@ void thermoInitAnodeROP_demo(std::string inFile) {
     tp2->setState_TP(T,P);
     surf.setState_TP(T,P);
 
-    MultiSpeciesThermo& sp = tp->speciesThermo();
+    Cantera::MultiSpeciesThermo& sp = tp->speciesThermo();
     type = sp.reportType(0);
     sp.reportParams(0, type, c, minTemp, maxTemp, refPressure);
     printf("\nSpecies Thermo: At x=%f, h=%f, s=%f, E0=%f\n",tp->moleFraction(0), c[1],c[2], 1e-3/96485*(-c[1]+298.15*c[2]));
@@ -254,11 +256,11 @@ void thermoInitAnodeROP_demo(std::string inFile) {
         //dS = surf.thermo(k).entropy_mole();
         for (size_t n = 0; n < surf.thermo(k).nSpecies(); n++) {
             spName = surf.thermo(k).speciesName(n);
-            std::cout<< "Phase: " <<  phName << " species: "<< spName << " dH0 = " << dH0[n]*GasConstant*T << " dS0 = " << dS0[n]*GasConstant <<std::endl;
+            std::cout<< "Phase: " <<  phName << " species: "<< spName << " dH0 = " << dH0[n]*Cantera::GasConstant*T << " dS0 = " << dS0[n]*Cantera::GasConstant <<std::endl;
             std::cout<< "Phase: " <<  phName << " species: "<< spName << " partial dH = " << dH[n] << " partial dS = " << dS[n] <<std::endl;
         }
     }
-    vector_fp wdot(tp->nSpecies() + tp1->nSpecies() +tp2->nSpecies() +surf.nSpecies());
+    Cantera::vector_fp wdot(tp->nSpecies() + tp1->nSpecies() +tp2->nSpecies() +surf.nSpecies());
     surf.getNetProductionRates(wdot.data());
     surf.getDeltaGibbs(dG);
     surf.getDeltaEnthalpy(dH);
@@ -287,17 +289,17 @@ void thermoInitRefdemo(std::string inFile) {
     double P=101325;
     double dG[20],dH[20],dS[20],dG0[20],dH0[20],dS0[20];
 
-    std::vector<ThermoPhase*> refPhaseList;
+    std::vector<Cantera::ThermoPhase*> refPhaseList;
 
-    ThermoPhase* tp1 = (newPhase(inFile,"electrolyte"));
-    ThermoPhase* tp2 = (newPhase(inFile,"electron"));
-    ThermoPhase* tp = (newPhase(inFile,"lithium_metal"));
+    Cantera::ThermoPhase* tp1 = (Cantera::newPhase(inFile,"electrolyte"));
+    Cantera::ThermoPhase* tp2 = (Cantera::newPhase(inFile,"electron"));
+    Cantera::ThermoPhase* tp = (Cantera::newPhase(inFile,"lithium_metal"));
 
     refPhaseList.push_back(tp);
     refPhaseList.push_back(tp1);
     refPhaseList.push_back(tp2);
 
-    Edge refSurf(inFile, "edge_reference_electrode", refPhaseList);
+    Cantera::Edge refSurf(inFile, "edge_reference_electrode", refPhaseList);
 
     tp->setState_TP(T,P);
     tp1->setState_TP(T,P);
@@ -321,11 +323,11 @@ void thermoInitRefdemo(std::string inFile) {
         //dS = refSurf.thermo(k).entropy_mole();
         for (size_t n = 0; n < refSurf.thermo(k).nSpecies(); n++) {
             spName = refSurf.thermo(k).speciesName(n);
-            std::cout<< "Phase: " <<  phName << " species: "<< spName << " dH0 = " << dH0[n]*GasConstant*T << " dS0 = " << dS0[n]*GasConstant <<std::endl;
+            std::cout<< "Phase: " <<  phName << " species: "<< spName << " dH0 = " << dH0[n]*Cantera::GasConstant*T << " dS0 = " << dS0[n]*Cantera::GasConstant <<std::endl;
             std::cout<< "Phase: " <<  phName << " species: "<< spName << " partial dH = " << dH[n] << " partial dS = " << dS[n] <<std::endl;
         }
     }
-    vector_fp wdot(tp->nSpecies() + tp1->nSpecies() +tp2->nSpecies() +refSurf.nSpecies());
+    Cantera::vector_fp wdot(tp->nSpecies() + tp1->nSpecies() +tp2->nSpecies() +refSurf.nSpecies());
     refSurf.getNetProductionRates(wdot.data());
     refSurf.getDeltaGibbs(dG);
     refSurf.getDeltaEnthalpy(dH);
@@ -343,11 +345,11 @@ void thermoInitRefdemo(std::string inFile) {
     }
 }
 
-void writeRxnPathDiagram(double time, ReactionPathBuilder& b,
-        Kinetics& reaction, std::ostream& logfile, std::ostream& outfile)
+void writeRxnPathDiagram(double time, Cantera::ReactionPathBuilder& b,
+		Cantera::Kinetics& reaction, std::ostream& logfile, std::ostream& outfile)
 {
     // create a new empty diagram
-    ReactionPathDiagram d;
+	Cantera::ReactionPathDiagram d;
     d.show_details = false; // show the details of which reactions contribute to the flux
     d.threshold = 0.001; // set the threshold for the minimum flux relative value
     d.bold_color = "orange"; // color for bold lines
@@ -358,7 +360,7 @@ void writeRxnPathDiagram(double time, ReactionPathBuilder& b,
     d.dashed_max = 0.01; // maximum relative flux for dashed lines
     d.label_min = 0.01; // minimum relative flux for labels
     d.scale = -1; // autoscale
-    d.flow_type = OneWayFlow; //OneWayFlow; // set to either NetFlow or OneWayFlow
+    d.flow_type = Cantera::OneWayFlow; //OneWayFlow; // set to either NetFlow or OneWayFlow
     d.arrow_width = -2.0; // arrow width. If < 0, then scale with flux value
     d.title = fmt::format("time = {} (s)", time); // title
     b.build(reaction, "E", logfile, d); // build the diagram following elemental nitrogen
@@ -371,15 +373,15 @@ void thermoTestSPM(std::string inFile) {
     double P=101325;
     double dG, dH, dS, dG0;
     try {
-        ThermoPhase* tp = (newPhase(inFile,"anode"));
-        ThermoPhase* tp1 = (newPhase(inFile,"electron"));
-        ThermoPhase* tp2 = (newPhase(inFile,"electrolyte"));
-        ThermoPhase* tp3 = (newPhase(inFile,"cathode"));
-        std::vector<ThermoPhase*> phaseList;
+    	Cantera::ThermoPhase* tp = (Cantera::newPhase(inFile,"anode"));
+    	Cantera::ThermoPhase* tp1 = (Cantera::newPhase(inFile,"electron"));
+    	Cantera::ThermoPhase* tp2 = (Cantera::newPhase(inFile,"electrolyte"));
+    	Cantera::ThermoPhase* tp3 = (Cantera::newPhase(inFile,"cathode"));
+        std::vector<Cantera::ThermoPhase*> phaseList;
         phaseList.push_back(tp);
         phaseList.push_back(tp1);
         phaseList.push_back(tp2);
-        Interface surf(inFile, "edge_anode_electrolyte", phaseList);
+        Cantera::Interface surf(inFile, "edge_anode_electrolyte", phaseList);
 
         //Interface surf(inFile, "interface_cathode", phaseList);
         //std::cout<<surf.phaseIndex("cathode")<<" "<<surf.phaseIndex("electrolyte")<<" "<<surf.phaseIndex("electron_cathode");
@@ -425,7 +427,7 @@ void thermoTestSPM(std::string inFile) {
             std::cout << surf.kineticsSpeciesName(kk)<< " wdot = " << wdot[kk]<< std::endl;
             */
 
-    } catch (CanteraError& err){
+    } catch (Cantera::CanteraError& err){
         std::cout<<err.what()<< std::endl;
     }
 }
@@ -438,15 +440,15 @@ void printThermoReactionTDPA(std::string inFile) {
         /*surfName = "O_surface";
         ThermoPhase* tp2 = (newPhase(inFile,"gas_cathode"));*/
         surfName = "C_surface";
-        ThermoPhase* tp2 = (newPhase(inFile,"conductor"));
+        Cantera::ThermoPhase* tp2 = (Cantera::newPhase(inFile,"conductor"));
         /*surfName = "Li2O2_precipitation_from_solution";
         ThermoPhase* tp2 = (newPhase(inFile,"Li2O2"));*/
         /*surfName = "LiO2_precipitation";
         ThermoPhase* tp2 = (newPhase(inFile,"conductor"));
         ThermoPhase* tp3 = (newPhase(inFile,"LiO2"));
         ThermoPhase* tp4 = (newPhase(inFile,"Li2O2"));*/
-        ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
-        std::vector<ThermoPhase*> phaseList;
+        Cantera::ThermoPhase* tp1 = (Cantera::newPhase(inFile,"elyte"));
+        std::vector<Cantera::ThermoPhase*> phaseList;
         phaseList.push_back(tp1);
         phaseList.push_back(tp2);
         // Set phase standard state
@@ -454,7 +456,50 @@ void printThermoReactionTDPA(std::string inFile) {
             phaseList[k]->setState_TP(T,P);
         }
         printThermoKinetics(inFile, surfName, phaseList, T, P);
-    } catch (CanteraError& err){
+    } catch (Cantera::CanteraError& err){
+        std::cout<<err.what()<< std::endl;
+    }
+}
+
+void printThermoReactionFerrocene(std::string inFile) {
+    std::string surfName;
+    std::ifstream dataFile;
+    std::string line;
+    std::vector<double> data(5);
+
+    double T=298.15;
+    double P=101325;
+    dataFile.open("data/outData.dat");
+	FILE * pFile;
+	pFile = fopen ("compData.dat","w");
+    try
+    {
+        surfName = "WE_surface";
+        Cantera::ThermoPhase* tp1 = (Cantera::newPhase(inFile,"electrolyte"));
+        Cantera::ThermoPhase* tp2 = (Cantera::newPhase(inFile,"conductor"));
+        std::vector<Cantera::ThermoPhase*> phaseList;
+        phaseList.push_back(tp1);
+        phaseList.push_back(tp2);
+        // Set phase standard state
+        for (size_t k = 0; k < phaseList.size(); k++)
+        {
+            phaseList[k]->setState_TP(T,P);
+        }
+        printThermoKinetics(inFile, surfName, phaseList, T, P);
+        //
+        while (std::getline(dataFile, line))
+        {
+        	double d0, d1, d2, d3, d4, rop[3];
+        	std::sscanf(line.c_str(),"%lf\t%lf\t%lf\t%lf\t%lf", &d0, &d1, &d2, &d3, &d4);
+        	calc_itotCantera2s(d1, d2, d0, rop, d3);
+        	fprintf (pFile, "%.2e\t%12.3e\t%12.3e\t%12.3e\t%12.3e\n",d0, d1, d2, d3, rop[2]*96485);
+        }
+		/* Free memory */
+		dataFile.close();
+		fclose (pFile);
+    }
+    catch (Cantera::CanteraError& err)
+    {
         std::cout<<err.what()<< std::endl;
     }
 }
@@ -465,7 +510,7 @@ void printThermoReactionLi2O2(std::string inFile) {
     std::string surfName[] = {"C_surface", "O_surface", "Li2O2_surface"};
     double T=298.15;
     double P=101325;
-	std::vector<ThermoPhase*> phaseList;
+	std::vector<Cantera::ThermoPhase*> phaseList;
     try {
     	for (size_t i=0; i<surfName->size(); i++)
     	{
@@ -473,8 +518,8 @@ void printThermoReactionLi2O2(std::string inFile) {
     		{
     			std::cout<<"Printing "<<surfName[i]<<std::endl;
     			phaseList.clear();
-    			ThermoPhase* tp1 = (newPhase(inFile,"gas_cathode"));
-    			ThermoPhase* tp2 = (newPhase(inFile,"elyte"));
+    			Cantera::ThermoPhase* tp1 = (Cantera::newPhase(inFile,"gas_cathode"));
+    			Cantera::ThermoPhase* tp2 = (Cantera::newPhase(inFile,"elyte"));
     			phaseList.push_back(tp1);
     			phaseList.push_back(tp2);
     		}
@@ -482,9 +527,9 @@ void printThermoReactionLi2O2(std::string inFile) {
     		{
     			std::cout<<"Printing "<<surfName[i]<<std::endl;
     			phaseList.clear();
-    			ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
-    			ThermoPhase* tp2 = (newPhase(inFile,"Li2O2"));
-    			ThermoPhase* tp3 = (newPhase(inFile,"conductor"));
+    			Cantera::ThermoPhase* tp1 = (Cantera::newPhase(inFile,"elyte"));
+    			Cantera::ThermoPhase* tp2 = (Cantera::newPhase(inFile,"Li2O2"));
+    			Cantera::ThermoPhase* tp3 = (Cantera::newPhase(inFile,"conductor"));
     			phaseList.push_back(tp1);
     			phaseList.push_back(tp2);
     			phaseList.push_back(tp3);
@@ -493,8 +538,8 @@ void printThermoReactionLi2O2(std::string inFile) {
     		{
     			std::cout<<"Printing "<<surfName[i]<<std::endl;
     			phaseList.clear();
-    			ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
-    			ThermoPhase* tp2 = (newPhase(inFile,"Li2O2"));
+    			Cantera::ThermoPhase* tp1 = (Cantera::newPhase(inFile,"elyte"));
+    			Cantera::ThermoPhase* tp2 = (Cantera::newPhase(inFile,"Li2O2"));
     			phaseList.push_back(tp1);
     			phaseList.push_back(tp2);
     		}
@@ -502,9 +547,9 @@ void printThermoReactionLi2O2(std::string inFile) {
     		{
     			std::cout<<"Printing "<<surfName[i]<<std::endl;
 				phaseList.clear();
-    			ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
-    			ThermoPhase* tp2 = (newPhase(inFile,"LiO2"));
-    			ThermoPhase* tp3 = (newPhase(inFile,"Li2O2"));
+				Cantera::ThermoPhase* tp1 = (Cantera::newPhase(inFile,"elyte"));
+				Cantera::ThermoPhase* tp2 = (Cantera::newPhase(inFile,"LiO2"));
+				Cantera::ThermoPhase* tp3 = (Cantera::newPhase(inFile,"Li2O2"));
     			phaseList.push_back(tp1);
     			phaseList.push_back(tp2);
     			phaseList.push_back(tp3);
@@ -513,9 +558,9 @@ void printThermoReactionLi2O2(std::string inFile) {
     		{
     			std::cout<<"Printing "<<surfName[i]<<std::endl;
 				phaseList.clear();
-    			ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
-    			ThermoPhase* tp2 = (newPhase(inFile,"LiO2"));
-    			ThermoPhase* tp3 = (newPhase(inFile,"conductor"));
+				Cantera::ThermoPhase* tp1 = (Cantera::newPhase(inFile,"elyte"));
+				Cantera::ThermoPhase* tp2 = (Cantera::newPhase(inFile,"LiO2"));
+				Cantera::ThermoPhase* tp3 = (Cantera::newPhase(inFile,"conductor"));
     			phaseList.push_back(tp1);
     			phaseList.push_back(tp2);
     			phaseList.push_back(tp3);
@@ -524,9 +569,9 @@ void printThermoReactionLi2O2(std::string inFile) {
     		{
     			std::cout<<"Printing "<<surfName[i]<<std::endl;
 				phaseList.clear();
-    			ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
-    			ThermoPhase* tp2 = (newPhase(inFile,"Li2O2"));
-    			ThermoPhase* tp3 = (newPhase(inFile,"conductor"));
+				Cantera::ThermoPhase* tp1 = (Cantera::newPhase(inFile,"elyte"));
+				Cantera::ThermoPhase* tp2 = (Cantera::newPhase(inFile,"Li2O2"));
+    			Cantera::ThermoPhase* tp3 = (Cantera::newPhase(inFile,"conductor"));
     			phaseList.push_back(tp1);
     			phaseList.push_back(tp2);
     			phaseList.push_back(tp3);
@@ -541,7 +586,7 @@ void printThermoReactionLi2O2(std::string inFile) {
     		printThermoKinetics(inFile, surfName[i], phaseList, T, P);
     	}
 
-    } catch (CanteraError& err){
+    } catch (Cantera::CanteraError& err){
         std::cout<<err.what()<< std::endl;
     }
 }
@@ -552,19 +597,19 @@ void printThermoReactionO2(std::string inFile) {
     double P=101325;
     try {
         surfName = "O_surface";
-        ThermoPhase* tp2 = (newPhase(inFile,"gas_cathode"));
-        ThermoPhase* tp1 = (newPhase(inFile,"elyte"));
-        std::vector<ThermoPhase*> phaseList;
+        Cantera::ThermoPhase* tp2 = (Cantera::newPhase(inFile,"gas_cathode"));
+        Cantera::ThermoPhase* tp1 = (Cantera::newPhase(inFile,"elyte"));
+        std::vector<Cantera::ThermoPhase*> phaseList;
         phaseList.push_back(tp1);
         phaseList.push_back(tp2);
-        Interface surf(inFile, surfName, phaseList);
+        Cantera::Interface surf(inFile, surfName, phaseList);
         // Set phase standard state
         for (size_t k = 0; k < phaseList.size(); k++) {
             phaseList[k]->setState_TP(T,P);
         }
         surf.setState_TP(T,P);
         printThermoKinetics(inFile, surfName, phaseList, T, P);
-    } catch (CanteraError& err){
+    } catch (Cantera::CanteraError& err){
         std::cout<<err.what()<< std::endl;
     }
 }
@@ -575,21 +620,21 @@ void printThermoReactionLi(std::string inFile) {
     double P=101325;
     try {
         surfName = "Li_surface";
-        ThermoPhase* tp1 = (newPhase(inFile,"lithium"));
-        ThermoPhase* tp2 = (newPhase(inFile,"elyte"));
-        ThermoPhase* tp3 = (newPhase(inFile,"conductor"));
-        std::vector<ThermoPhase*> phaseList;
+        Cantera::ThermoPhase* tp1 = (Cantera::newPhase(inFile,"lithium"));
+        Cantera::ThermoPhase* tp2 = (Cantera::newPhase(inFile,"elyte"));
+        Cantera::ThermoPhase* tp3 = (Cantera::newPhase(inFile,"conductor"));
+        std::vector<Cantera::ThermoPhase*> phaseList;
         phaseList.push_back(tp1);
         phaseList.push_back(tp2);
         phaseList.push_back(tp3);
-        Interface surf(inFile, surfName, phaseList);
+        Cantera::Interface surf(inFile, surfName, phaseList);
         // Set phase standard state
         for (size_t k = 0; k < phaseList.size(); k++) {
             phaseList[k]->setState_TP(T,P);
         }
         std::cout<<tp3->speciesIndex("electron")<<std::endl;
         printThermoKinetics(inFile, surfName, phaseList, T, P);
-    } catch (CanteraError& err){
+    } catch (Cantera::CanteraError& err){
         std::cout<<err.what()<< std::endl;
     }
 }
@@ -600,28 +645,28 @@ void printThermoReactionPEM(std::string inFile) {
     double P=101325;
     try {
         surfName = "cathode_reaction_surface";
-        ThermoPhase* tp1 = (newPhase(inFile,"gas_cathode"));
-        ThermoPhase* tp2 = (newPhase(inFile,"Platinum"));
-        ThermoPhase* tp3 = (newPhase(inFile,"Nafion"));
-        std::vector<ThermoPhase*> phaseList;
+        Cantera::ThermoPhase* tp1 = (Cantera::newPhase(inFile,"gas_cathode"));
+        Cantera::ThermoPhase* tp2 = (Cantera::newPhase(inFile,"Platinum"));
+        Cantera::ThermoPhase* tp3 = (Cantera::newPhase(inFile,"Nafion"));
+        std::vector<Cantera::ThermoPhase*> phaseList;
         phaseList.push_back(tp1);
         phaseList.push_back(tp2);
         phaseList.push_back(tp3);
-        Interface surf(inFile, surfName, phaseList);
+        Cantera::Interface surf(inFile, surfName, phaseList);
         // Set phase standard state
         for (size_t k = 0; k < phaseList.size(); k++) {
             phaseList[k]->setState_TP(T,P);
         }
         printThermoKinetics(inFile, surfName, phaseList, T, P);
 
-    } catch (CanteraError& err){
+    } catch (Cantera::CanteraError& err){
         std::cout<<err.what()<< std::endl;
     }
 }
 
-void printThermoKinetics(std::string inFile, std::string surfName, std::vector<ThermoPhase*> phaseList, double T, double P) {
+void printThermoKinetics(std::string inFile, std::string surfName, std::vector<Cantera::ThermoPhase*> phaseList, double T, double P) {
 
-    Interface surf(inFile, surfName, phaseList);
+	Cantera::Interface surf(inFile, surfName, phaseList);
     surf.setState_TP(T,P);
     // Phase thermodynamics
     std::cout<<"\nPrinting species thermodynamics..."<<std::endl;
@@ -629,12 +674,12 @@ void printThermoKinetics(std::string inFile, std::string surfName, std::vector<T
         std::cout << "Name: "<<surf.thermo(k).name()<<" #Species: "<< surf.thermo(k).nSpecies()
         		<<" density: "<<surf.thermo(k).density()
 				<<" Epot: "<<surf.thermo(k).electricPotential() <<std::endl;
-        vector_fp mu0(surf.thermo(k).nSpecies());
-        vector_fp muE(surf.thermo(k).nSpecies());
-        vector_fp mu(surf.thermo(k).nSpecies());
-        vector_fp h0(surf.thermo(k).nSpecies());
-        vector_fp s0(surf.thermo(k).nSpecies());
-        vector_fp ac(surf.thermo(k).nSpecies());
+        Cantera::vector_fp mu0(surf.thermo(k).nSpecies());
+        Cantera::vector_fp muE(surf.thermo(k).nSpecies());
+        Cantera::vector_fp mu(surf.thermo(k).nSpecies());
+        Cantera::vector_fp h0(surf.thermo(k).nSpecies());
+        Cantera::vector_fp s0(surf.thermo(k).nSpecies());
+        Cantera::vector_fp ac(surf.thermo(k).nSpecies());
         surf.thermo(k).getStandardChemPotentials(mu0.data());
         surf.thermo(k).getElectrochemPotentials(muE.data());
         surf.thermo(k).getChemPotentials(mu.data());
@@ -644,13 +689,13 @@ void printThermoKinetics(std::string inFile, std::string surfName, std::vector<T
         surf.thermo(1).setElectricPotential(0);
         double mmu0;
         for (size_t kk = 0; kk < surf.thermo(k).nSpecies(); kk++) {
-            mmu0 = mu0[kk] + Faraday * surf.thermo(k).electricPotential()*surf.thermo(k).charge(kk);
+            mmu0 = mu0[kk] + Cantera::Faraday * surf.thermo(k).electricPotential()*surf.thermo(k).charge(kk);
             mmu0 -= surf.thermo(0).RT() * surf.thermo(k).logStandardConc(kk);
             std::cout<<std::setprecision (15)<<"Species: "<< surf.thermo(k).speciesName(kk)
                      <<", c0 (kmol/m3) = "<<surf.thermo(k).standardConcentration(kk)<<", c (kmol/m3) = "<<surf.thermo(k).concentration(kk)
                      <<", ac (kmol/m3) = "<< ac[kk]<<", mu (J/mol) = "<<mmu0/1e3
-                     <<", mu0 (J/mol) = "<<mu0[kk]/1e3<<", muE (J/mol) = "<<muE[kk]/1e3<<" h0 (J/mol): "<< h0[kk]*GasConstant*T/1e3
-                     <<" s0 (J/mol/K): "<<s0[kk]*GasConstant/1e3<<std::endl;
+                     <<", mu0 (J/mol) = "<<mu0[kk]/1e3<<", muE (J/mol) = "<<muE[kk]/1e3<<" h0 (J/mol): "<< h0[kk]*Cantera::GasConstant*T/1e3
+                     <<" s0 (J/mol/K): "<<s0[kk]*Cantera::GasConstant/1e3<<std::endl;
         }
         std::cout<<std::endl;
     }
@@ -658,16 +703,12 @@ void printThermoKinetics(std::string inFile, std::string surfName, std::vector<T
     // Reaction thermodynamics
     std::cout<<surf.report();
     std::cout<<"Printing reaction thermodynamics..."<<std::endl;
-    vector_fp dG0(surf.nReactions());
-    vector_fp dG(surf.nReactions());
-    vector_fp dmu(surf.nReactions());
+    Cantera::vector_fp dG0(surf.nReactions()), dG(surf.nReactions());
+    Cantera::vector_fp dmu(surf.nReactions());
     /*vector_fp dH(surf.nReactions());
     vector_fp dS(surf.nReactions());*/
-    vector_fp kc(surf.nReactions());
-    vector_fp fdot(surf.nReactions());
-    vector_fp rdot(surf.nReactions());
-    vector_fp frop(surf.nReactions());
-    vector_fp rrop(surf.nReactions());
+    Cantera::vector_fp kc(surf.nReactions()), fdot(surf.nReactions());
+    Cantera::vector_fp rdot(surf.nReactions()), frop(surf.nReactions()), rrop(surf.nReactions());
     /*surf.getDeltaSSGibbs(dG0.data());
     surf.getDeltaGibbs(dG.data());
     surf.getDeltaElectrochemPotentials(dmu.data());
@@ -688,10 +729,10 @@ void printThermoKinetics(std::string inFile, std::string surfName, std::vector<T
 		<<" Keq_cal = exp(-dmu/RT) = "<<std::exp(-dmu[k]/(GasConstant*T))<<"\n"*/
         <<"kf = "<< fdot[k] << " frop = " << frop[k] << " kr = " << rdot[k] << " rrop = " << rrop[k] << " Keq = kf/kr = " << fdot[k]/rdot[k]<< "\n\n";
     }
-    vector_fp wdot(surf.nTotalSpecies());
+    Cantera::vector_fp wdot(surf.nTotalSpecies());
     surf.getNetProductionRates(wdot.data());
     std::cout<<"Printing species ROP..."<<std::endl;
     for (size_t kk = 0; kk < surf.nTotalSpecies(); kk++)
-        std::cout << surf.kineticsSpeciesName(kk)<< " wdot = " << wdot[kk] <<std::endl;
+        std::cout << surf.kineticsSpeciesName(kk)<< " wdot = " << wdot[surf.kineticsSpeciesIndex(surf.kineticsSpeciesName(kk))] <<std::endl;
 
 }

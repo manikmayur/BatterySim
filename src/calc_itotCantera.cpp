@@ -8,7 +8,8 @@
 #include <iostream>
 #include "calc_itotCantera.h"
 
-void calc_itotCantera2s(doublereal cA, doublereal cB, doublereal t, doublereal rop[nSpecies+1], doublereal phis) {
+void calc_itotCantera2s(doublereal cA, doublereal cB, doublereal t, doublereal rop[nSpecies+1], doublereal phis)
+{
 	std::string s = "";
 
 	try
@@ -71,7 +72,6 @@ void calc_itotCantera2s(doublereal cA, doublereal cB, doublereal t, doublereal r
 		rop[0] = wdot[surf.kineticsSpeciesIndex(cA_name)]*1e3;
 		rop[1] = wdot[surf.kineticsSpeciesIndex(cB_name)]*1e3;
 		rop[2] = wdot[surf.kineticsSpeciesIndex("electron")]*1e3;
-		std::cout<<surf.kineticsSpeciesIndex(cA_name)<<" "<<rop[0]<<" "<<surf.kineticsSpeciesIndex(cB_name)<<" "<<rop[1]<<std::endl;
 	}
 	catch (Cantera::CanteraError& err){
 		printf(err.what());
