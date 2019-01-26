@@ -7,3 +7,6 @@
 *.prefs
 .settings/org.eclipse.cdt.managedbuilder.core.prefs
 .cproject
+/CyclicVoltammetry/
+*.prefs
+.cproject

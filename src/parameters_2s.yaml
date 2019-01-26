@@ -1,0 +1,35 @@
+---
+#Cantera parameters
+inputFile: "cantera/Ferrocene_CV.xml" # XML file name
+reactionSurfName: "WE_surface"
+electrolytePhaseName: "electrolyte"
+electrodePhaseName: "conductor"
+cA_name: "Ferrocene[elyte]"
+cB_name: "Ferrocene+[elyte]"
+
+#Transport paramters
+cA_bulk: 1e-3 # [mol/L] "Reactant bulk concentration"
+cB_bulk: 1e-6 # [mol/L] "Product bulk concentration"
+c_ref: 1e-3 # [mol/L] "Reactant bulk concentration"
+DA: 4e-10 # [m^2/s] "Reactant diffusion coefficient"
+DB: 4e-10 # [m^2/s] "Product diffusion coefficient"
+Cdl: 0.2 # [F/m^2] "Double layer capacity"
+
+#Cyclic voltammetry parameters
+v: 1e-2 #; // [V/s] "Voltammetric scan rate"
+E1: 0 #; // [V] "Start potential"
+E2: 1.0 #; // [V] "Switching potential"
+#tp: (E2-E1)/v ; // [s] "Peak time"
+#L: 6*sqrt(DA*2*std::abs(E1-E2)/v); // [m] "Outer bound on diffusion layer"
+n_scp: 3 # // "Number of scans before measurement"
+n_sc: 1 # // "Number of scans, measurement"
+
+# Butler-Volmer parameters
+n: 1 #; // [1] "Number of electrons transferred"
+Eeq: 0.2 #; // [V] "Equilibrium potential"
+i0: 10.0 #; // [A/m^2] "Exchange current density"
+#k0: i0/F; // "Reaction rate"
+alpha_a: 0.5 #; // [1] "Anodic transfer coefficient"
+alpha_c: 0.5 #; // [1] "Cathodic transfer coefficient"
+vA: 1 #; // [1] "Valence of the species A"
+vB: -1 #; // [1] "Valence of the species B"

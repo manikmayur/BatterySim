@@ -56,11 +56,11 @@
 
 #define T0		ZERO                 /* initial time */
 #define NOUT	100                   /* number of output times */
-#define DT		RCONST(2*tp/NOUT)       /* number of seconds in two hours  */
+#define DT		RCONST(2*p_tP/NOUT)       /* number of seconds in two hours  */
 
 #define XMIN	ZERO                 /* grid boundaries in x  */
-#define XMAX    RCONST(L)
-#define XMID    RCONST(L/2)         /* grid midpoints in x,y */
+#define XMAX    RCONST(p_L)
+#define XMID    RCONST(p_L/2)         /* grid midpoints in x,y */
 
 #define MX		100             /* MX = number of x mesh points */
 #define NSMX	NUM_SPECIES*MX             /* NSMX = NUM_SPECIES*MX */
@@ -140,8 +140,6 @@ int main(void)
 	cvode_mem = NULL;
 	try
 	{
-		//printf("itot = %f, eta = %f", itot, eta);
-
 		/* Allocate memory, and set problem data, initial values, tolerances */
 		u = N_VNew_Serial(NEQ);
 		if(check_flag((void *)u, "N_VNew_Serial", 0)) return(1);
@@ -149,7 +147,6 @@ int main(void)
 		if(check_flag((void *)data, "AllocUserData", 2)) return(1);
 		InitUserData(data);
 		SetInitialProfiles(u, data->dx);
-		printf("Hi there!");
 		abstol=ATOL;
 		reltol=RTOL;
 
@@ -243,8 +240,8 @@ static UserData AllocUserData(void)
 static void InitUserData(UserData data)
 {
 	data->dx = (XMAX-XMIN)/(MX-1); // jx = 0, x = XMIN, jx = 1, x = XMAX, x = XMIN + jx*dx
-	data->hdcoA = DA/SUNSQR(data->dx);
-	data->hdcoB = DB/SUNSQR(data->dx);
+	data->hdcoA = p_DA/SUNSQR(data->dx);
+	data->hdcoB = p_DB/SUNSQR(data->dx);
 }
 
 /* Free data memory */
@@ -266,8 +263,8 @@ static void SetInitialProfiles(N_Vector u, realtype dx)
 	/* Load initial profiles of cA and cB into u vector */
 	for (int jx=0; jx < MX; jx++)
 	{
-		IJth(udata,1,jx) = cA_bulk;
-		IJth(udata,2,jx) = cB_bulk;
+		IJth(udata,1,jx) = p_c0A;
+		IJth(udata,2,jx) = p_c0B;
 	}
 }
 
@@ -431,12 +428,12 @@ static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
 		 * 0 <= j <= MX-1, 0 <= k <= MY-1.
 		 */
 
-		cAlt = (jx == 0) ? cA_bulk : IJth(udata,1,jx-1);
-		cBlt = (jx == 0) ? cB_bulk : IJth(udata,2,jx-1);
+		cAlt = (jx == 0) ? p_c0A : IJth(udata,1,jx-1);
+		cBlt = (jx == 0) ? p_c0B : IJth(udata,2,jx-1);
 		//cAlt = (jx == 0) ? IJth(udata,1,0) - vA*itot/(DA*F)*data->dx : IJth(udata,1,jx-1);
 		//cBlt = (jx == 0) ? IJth(udata,2,0) - vB*itot/(DB*F)*data->dx : IJth(udata,2,jx-1);
-		cArt = (jx == MX-1) ? IJth(udata,1,MX-1) + rop[0]/(DA)*data->dx : IJth(udata,1,jx+1);
-		cBrt = (jx == MX-1) ? IJth(udata,2,MX-1) + rop[1]/(DB)*data->dx : IJth(udata,2,jx+1);
+		cArt = (jx == MX-1) ? IJth(udata,1,MX-1) + rop[0]/(p_DA)*data->dx : IJth(udata,1,jx+1);
+		cBrt = (jx == MX-1) ? IJth(udata,2,MX-1) + rop[1]/(p_DB)*data->dx : IJth(udata,2,jx+1);
 		//DA/SUNSQR(data->dx) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
 		hordA = hordcoA*(cArt - TWO*cA + cAlt);
 		//DB/SUNSQR(data->dx) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
@@ -459,10 +456,10 @@ static int calc_itot(realtype cA, realtype cB, realtype t, realtype &itot, realt
 	realtype eta= 0.0, iloc = 0.0;
 
 	// Set voltage ramp
-	eta = phis-Eeq;
+	eta = phis-p_Eeq;
 	//         idl = (t<=tp)*(v*Cdl)+(t>tp)*(-v*Cdl);
 	// Calculate Butler-Volmer current density
-	iloc = i0*(cA*exp(alpha_a*F*eta/(R*T)) - cB*exp(-alpha_c*F*eta/(R*T)));
+	iloc = p_i0*(cA*exp(p_alphaA*Faraday*eta/(gasConstant*T)) - cB*exp(-p_alphaC*Faraday*eta/(gasConstant*T)));
 	itot = iloc;
 	return(0);
 }

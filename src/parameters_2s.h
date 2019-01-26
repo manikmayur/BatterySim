@@ -10,44 +10,50 @@
 
 #include <string>
 #include <math.h>
+#include <iostream>
+#include "yaml-cpp/yaml.h"
 
-int const F = 96485; // [C/mol] "Faraday constant"
-double const R = 8.314; // [J/(mol.K)] "Universal gas constant"
+int const Faraday = 96485; // [C/mol] "Faraday constant"
+double const gasConstant = 8.314; // [J/(mol.K)] "Universal gas constant"
 double const T = 298.15; // [K] Temperature
 double const P = 101325.0; // [Pa] Pressure
 int const nSpecies = 2; // [C/mol] "Number of species"
-// Cantera parameters
-std::string const inputFile = "cantera/Ferrocene_CV.xml"; // XML file name
-std::string const reactionSurfName = "WE_surface";
-std::string const electrolytePhaseName = "electrolyte";
-std::string const electrodePhaseName = "conductor";
-std::string const cA_name = "Ferrocene[elyte]";
-std::string const cB_name = "Ferrocene+[elyte]";
-// Transport paramters
-double const cA_bulk = 1e-3; // [mol/L] "Reactant bulk concentration"
-double const cB_bulk = 1e-6; // [mol/L] "Product bulk concentration"
-double const c_ref = 1e-3; // [mol/L] "Reactant bulk concentration"
-double const DA = 4e-10; // [m^2/s] "Reactant diffusion coefficient"
-double const DB = 4e-10; // [m^2/s] "Product diffusion coefficient"
-double const Cdl = 0.2*0; // [F/m^2] "Double layer capacity"
-// Cyclic voltammetry parameters
-double const v = 0.01; // [V/s] "Voltammetric scan rate"
-double const E1 = 0; // [V] "Start potential"
-double const E2 = 1; // [V] "Switching potential"
-double const tp = (E2-E1)/v ; // [s] "Peak time"
-double const L = 6*sqrt(DA*2*std::abs(E1-E2)/v); // [m] "Outer bound on diffusion layer"
-unsigned int const n_scp = 3; // "Number of scans before measurement"
-unsigned int const n_sc = 1; // "Number of scans, measurement"
-// Butler-Volmer parameters
-unsigned int const n = 1; // [1] "Number of electrons transferred"
-double const Eeq = 0.2; // [V] "Equilibrium potential"
-double const i0 = 10.0; // [A/m^2] "Exchange current density"
-double const k0 = i0/F; // "Reaction rate"
-double const alpha_a = 0.5; // [1] "Anodic transfer coefficient"
-double const alpha_c = 0.5; // [1] "Cathodic transfer coefficient"
-int const vA = 1; // [1] "Valence of the species A"
-int const vB = -1; // [1] "Valence of the species B"
+std::string const paramFile = "src/parameters_2s.yaml"; // XML file name
+YAML::Node const static params = YAML::LoadFile(paramFile);
 
-#define Vcell(t) ((t<=tp) ? v*t + E1 : -v*(t-tp) + E2)
+// Load cantera parameters
+std::string const p_inputFile = params["inputFile"].as<std::string>(); // XML file name
+std::string const p_nameReactionSurfName = params["reactionSurfName"].as<std::string>();
+std::string const p_nameElectrolytePhase = params["electrolytePhaseName"].as<std::string>();
+std::string const p_nameElectrodePhase = params["electrodePhaseName"].as<std::string>();
+std::string const p_nameSpeciesA = params["cA_name"].as<std::string>();
+std::string const p_nameSpeciesB = params["cB_name"].as<std::string>();
+
+// Transport paramters
+double const p_c0A = params["cA_bulk"].as<double>(); // [mol/L] "Reactant bulk concentration"
+double const p_c0B = params["cB_bulk"].as<double>(); // [mol/L] "Product bulk concentration"
+double const p_c0 = params["c_ref"].as<double>(); // [mol/L] "Reactant bulk concentration"
+double const p_DA = params["DA"].as<double>(); // [m^2/s] "Reactant diffusion coefficient"
+double const p_DB = params["DB"].as<double>(); // [m^2/s] "Product diffusion coefficient"
+double const p_cDL = params["Cdl"].as<double>(); // [F/m^2] "Double layer capacity"
+// Cyclic voltammetry parameters
+double const p_scanRate = params["v"].as<double>(); // [V/s] "Voltammetric scan rate"
+double const p_startVoltage = params["E1"].as<double>(); // [V] "Start potential"
+double const p_switchVoltage = params["E2"].as<double>(); // [V] "Switching potential"
+double const p_tP = std::abs((p_switchVoltage-p_startVoltage)/p_scanRate) ; // [s] "Peak time"
+double const p_L = 6*sqrt(2*p_DA*p_tP); // [m] "Outer bound on diffusion layer"
+unsigned int const p_nScp = params["n_scp"].as<unsigned int>(); // "Number of scans before measurement"
+unsigned int const p_nSc = params["n_sc"].as<unsigned int>(); // "Number of scans, measurement"
+// Butler-Volmer parameters
+unsigned int const p_nElectrons = params["n"].as<unsigned int>(); // [1] "Number of electrons transferred"
+double const p_Eeq = params["Eeq"].as<double>(); // [V] "Equilibrium potential"
+double const p_i0 = params["i0"].as<double>(); // [A/m^2] "Exchange current density"
+double const p_k0 = p_i0/Faraday; // "Reaction rate"
+double const p_alphaA = params["alpha_a"].as<double>(); // [1] "Anodic transfer coefficient"
+double const p_alphaC = params["alpha_c"].as<double>(); // [1] "Cathodic transfer coefficient"
+int const p_vA = params["vA"].as<int>(); // [1] "Valence of the species A"
+int const p_vB = params["vB"].as<int>(); // [1] "Valence of the species B"
+
+#define Vcell(t) ((t<=p_tP) ? p_scanRate*t + p_startVoltage : -p_scanRate*(t-p_tP) + p_switchVoltage)
 
 #endif /* PARAMETERS_2S_H_ */
