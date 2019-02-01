@@ -55,7 +55,7 @@
 
 #define T0		ZERO                 /* initial time */
 #define NOUT	100                   /* number of output times */
-#define DT		RCONST(2000/NOUT)       /* number of seconds in two hours  */
+#define DT		RCONST(p_tTotal/NOUT)       /* number of seconds in two hours  */
 
 #define XMIN	ZERO                 /* grid boundaries in x  */
 #define XMAX    RCONST(ONE)

@@ -40,6 +40,7 @@ std::string const p_nameAnodeSurf = params["anodeSurfaceName"].as<std::string>()
 double const p_I1C = params["I1C"].as<double>(); // [A] "1C discharge current"
 double const p_cR = params["cR"].as<double>(); // [1] "C-rate"
 double const p_Iapp = p_cR*p_I1C; // [A] "Applied current"
+double const p_tTotal = 3600/p_cR; // [s] "Total runtime"
 
 // Cell geometry parameters
 double const p_L_sep = params["L_sep"].as<double>(); // [m] "Separator thickness"
