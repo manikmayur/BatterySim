@@ -1,0 +1,44 @@
+---
+# Cantera parameters
+inputFile: "cantera/Lithium_ion_battery.xml" # XML file name
+cathodePhaseName: "cathode"
+cathodeIntSpeciesName: "Li[cathode]"
+cathodeVacSpeciesName: "V[cathode]"
+anodePhaseName: "anode"
+anodeIntSpeciesName: "Li[anode]"
+anodeVacSpeciesName: "V[anode]"
+electrolytePhaseName: "electrolyte"
+conductorPhaseName: "conductor"
+cathodeSurfaceName: "edge_cathode_electrolyte"
+anodeSurfaceName: "edge_anode_electrolyte"
+
+# Load parameters
+I1C: 1.656 # [A] "1C discharge current"
+cR: 2 # [1] "C-rate"
+
+# Cell geometry parameters
+L_sep: 25e-6 # [m] "Separator thickness"
+L_ca: 70e-6 # [m] "Cathode thickness"
+L_an: 73.5e-6 # [m] "Anode thickness"
+
+# Cathode material parameters
+rP_ca: 8.5e-6 # [m] "Particle radius cathode"
+xLimax_ca: 1 # [1] "Maximum cathode stoichiometry"
+xLimin_ca: 0.4952 # [1] "Minimum cathode stoichiometry"
+DLiref_ca: 1e-14 # [m^2/s] "Solid phase Li-diffusivity LCO"
+Ediff_ca: 29 # [kJ/mol] "Cathode diffusion activation energy"
+csMax_ca: 51410 # [mol/m^3] "Max solid phase concentration cathode"
+S_ca: 1.1167 # [m^2] "Cathode geomtric area"
+
+# Anode material parameters
+rP_an: 12.5e-6 # [m] "Particle radius anode"
+xLimax_an: 0.7522 # [1] "Maximum anode stoichiometry"
+xLimin_an: 0.01 # [1] "Minimum anode stoichiometry"
+DLiref_an: 3.9e-14 # [m^2/s] "Solid phase Li-diffusivity LMO"
+Ediff_an: 35 # [kJ/mol] "Anode diffusion activation energy"
+csMax_an: 31833 # [mol/m^3] "Max solid phase concentration anode"
+S_an: 0.7824 # [m^2] "Cathode geomtric area"
+
+# Electrolyte material parameters
+cE: 1000 # [mol/m^3] "Electrolyte concentration"
+cE_ref: 1000 # [mol/m^3] "Electrolyte reference concentration"
