@@ -14,7 +14,7 @@ anodeSurfaceName: "edge_anode_electrolyte"
 
 # Load parameters
 I1C: 1.656 # [A] "1C discharge current"
-cR: 2 # [1] "C-rate"
+cR: 1 # [1] "C-rate"
 
 # Cell geometry parameters
 L_sep: 25e-6 # [m] "Separator thickness"

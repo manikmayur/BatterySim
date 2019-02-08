@@ -5,9 +5,9 @@
  *      Author: Manik
  */
 
-#include <src/calc_potCantera.h>
+#include "cantera/canteraFunctions.h"
+#include "singleParticleModel/parameters_SPM.h"
 #include <iostream>
-#include "parameters_SPM.h"
 typedef struct
 {
 	Cantera::Interface * surface;

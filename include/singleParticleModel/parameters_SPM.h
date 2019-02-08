@@ -20,7 +20,7 @@ double const Tref = 298.15; // [K] Reference temperature
 double const P = 101325.0; // [Pa] Pressure
 int const nSpecies = 2; // [C/mol] "Number of species"
 
-std::string const paramFile = "src/parameters_SPM.yaml"; // XML file name
+std::string const paramFile = "data/parameters_SPM.yaml"; // XML file name
 YAML::Node const static params = YAML::LoadFile(paramFile);
 
 // Load cantera parameters

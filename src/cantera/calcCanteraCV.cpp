@@ -6,11 +6,12 @@
  */
 
 #include <iostream>
-#include "calc_itotCantera.h"
+#include "cyclicVoltammetry/parameters_2s.h"
+#include "cantera/canteraFunctions.h"
 
 Cantera::Interface *surf;
 
-void initCantera()
+void initCanteraCV()
 {
 	// import the reference bulk phases
 	Cantera::ThermoPhase* elyte = (Cantera::newPhase(p_inputFile, p_nameElectrolytePhase));
@@ -24,7 +25,7 @@ void initCantera()
 	surf = Cantera::importInterface(p_inputFile, p_nameReactionSurfName, phaseListCA);
 }
 
-void calc_ropCantera2S(doublereal cA, doublereal cB, doublereal t, doublereal rop[nSpecies+1], doublereal phis)
+void calc_ropCanteraCV_2s(doublereal cA, doublereal cB, doublereal t, doublereal rop[nSpecies+1], doublereal phis)
 {
 	std::string s = "";
 	size_t idxElyte = 0, idxElode = 0;

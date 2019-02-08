@@ -20,7 +20,7 @@
 #include "cantera/kinetics/importKinetics.h"
 #include "cantera/Edge.h"
 #include "cantera/reactionpaths.h"
-#include "calc_itotCantera.h"
+#include "cantera/canteraFunctions.h"
 
 void thermoInitAnode_demo(std::string inFile);
 void thermoInitCathodePhases(std::string inFile);

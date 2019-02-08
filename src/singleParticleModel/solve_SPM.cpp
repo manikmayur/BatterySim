@@ -42,8 +42,8 @@
 #include <sunmatrix/sunmatrix_dense.h> /* access to dense SUNMatrix            */
 #include <sunlinsol/sunlinsol_dense.h> /* access to dense SUNLinearSolver      */
 #include <cvode/cvode_direct.h>        /* access to CVDls interface            */
-#include <src/calc_potCantera.h>
-#include "parameters_SPM.h"
+#include "cantera/canteraFunctions.h"
+#include "singleParticleModel/parameters_SPM.h"
 
 /* Problem Constants */
 

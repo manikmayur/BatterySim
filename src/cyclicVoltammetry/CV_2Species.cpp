@@ -43,8 +43,8 @@
 #include <sunmatrix/sunmatrix_dense.h> /* access to dense SUNMatrix            */
 #include <sunlinsol/sunlinsol_dense.h> /* access to dense SUNLinearSolver      */
 #include <cvode/cvode_direct.h>        /* access to CVDls interface            */
-#include "parameters_2s.h"
-#include "calc_itotCantera.h"
+#include "cyclicVoltammetry/parameters_2s.h"
+#include "cantera/canteraFunctions.h"
 
 /* Problem Constants */
 
@@ -179,7 +179,7 @@ int main(void)
 		if(check_flag(&flag, "CVSpilsSetLinearSolver", 1)) return 1;
 
 		/* Initialite Cantera */
-		initCantera();
+		initCanteraCV();
 
 		// 2nd
 		/* Create dense SUNMatrix for use in linear solves */
@@ -292,7 +292,7 @@ static void PrintOutput(void *cvode_mem, N_Vector u, realtype t, FILE *fp)
 	printf("c2 (bot.left/middle/top rt.) = %12.3e  %12.3e  %12.3e\n\n",
 			IJth(udata,2,0), IJth(udata,2,mxh), IJth(udata,2,mx1));
 	//calc_itot(IJth(udata,1,0), IJth(udata,2,0), t, itot, Vcell(t));
-	calc_ropCantera2S(IJth(udata,1,MX-1), IJth(udata,2,MX-1), t, rop, Vcell(t));
+	calc_ropCanteraCV_2s(IJth(udata,1,MX-1), IJth(udata,2,MX-1), t, rop, Vcell(t));
 	itot = rop[2];
 	fprintf (fp, "%.2e %12.3e %12.3e %12.3e %12.3e\n",t, IJth(udata,1,MX-1), IJth(udata,2,MX-1), Vcell(t), itot);
 
@@ -405,7 +405,7 @@ static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
 	hordcoB  = data->hdcoB;
 
 	//calc_itot(cAl, cBl, t, itot, Vcell(t));
-	calc_ropCantera2S(IJth(udata,1,MX-1), IJth(udata,2,MX-1), t, rop, Vcell(t));
+	calc_ropCanteraCV_2s(IJth(udata,1,MX-1), IJth(udata,2,MX-1), t, rop, Vcell(t));
 
 	itot = rop[2]*Cantera::Faraday;
 

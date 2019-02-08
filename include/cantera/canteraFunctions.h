@@ -5,10 +5,10 @@
  *      Author: Manik
  */
 
-#ifndef CALC_POTCANTERA_H_
-#define CALC_POTCANTERA_H_
+#ifndef CANTERAFUNCTIONS_H_
+#define CANTERAFUNCTIONS_H_
 
-#include <algorithms/algorithms.h>
+#include "algorithms/algorithms.h"
 #include "cantera/thermo.h"
 #include "cantera/Interface.h"
 #include "cantera/Edge.h"
@@ -20,9 +20,12 @@
 
 enum phaseType {CA,EL,AN};
 
+void initCanteraCV();
+void calc_ropCanteraCV_2s(doublereal cA, doublereal cB, doublereal t, doublereal *rop, doublereal phis);
+//
 void initCanteraSPM();
 double calc_potCantera(double phiL, std::string surface, Cantera::compositionMap speciesMoleFrac);
 double calc_ilocCantera(double phiS);
 size_t getPhaseIdxbyName(std::string phaseName, Cantera::Interface *surface);
 
-#endif /* CALC_POTCANTERA_H_ */
+#endif /* CANTERAFUNCTIONS_H_ */
