@@ -1,6 +1,14 @@
 ---
+# Model parameters
+model: 0 # [0 = SPM, 1 = SPMT, 2 = SPMe, 3 = SPMeT]
+tStart: 0
+tSteps: 100
+rSteps: 100
+aTol: 1e-12
+rTol: 1e-12
+
 # Cantera parameters
-inputFile: "cantera/Lithium_ion_battery.xml" # XML file name
+inputFile: "cantera/Lithium_ion_battery.xml" # "XML file name"
 cathodePhaseName: "cathode"
 cathodeIntSpeciesName: "Li[cathode]"
 cathodeVacSpeciesName: "V[cathode]"
@@ -14,12 +22,17 @@ anodeSurfaceName: "edge_anode_electrolyte"
 
 # Load parameters
 I1C: 1.656 # [A] "1C discharge current"
-cR: 1 # [1] "C-rate"
+cR: -1 # [1] "C-rate"
+T_amb: 298.15 # [K] "Ambient temperature"
 
-# Cell geometry parameters
+# Cell parameters
 L_sep: 25e-6 # [m] "Separator thickness"
 L_ca: 70e-6 # [m] "Cathode thickness"
 L_an: 73.5e-6 # [m] "Anode thickness"
+rhoCell: 1626 # [kg/m3] "Cell density"
+volCell: 3.3826e-5 # [m3] "Cell volume"
+cpCell: 750 # [J/(kg.K)] "Cell heat capacity"
+hA: 0.085 # [J/(s.K)] "Cell heat transfer coefficient"
 
 # Cathode material parameters
 rP_ca: 8.5e-6 # [m] "Particle radius cathode"
@@ -42,3 +55,20 @@ S_an: 0.7824 # [m^2] "Cathode geomtric area"
 # Electrolyte material parameters
 cE: 1000 # [mol/m^3] "Electrolyte concentration"
 cE_ref: 1000 # [mol/m^3] "Electrolyte reference concentration"
+
+# Active material properties
+DLi: 6e-14 #[m^2/s] Diffusion coefficient of Li in active material (Laresgoiti 2015 JPS)
+cPmax: 31.92e3 #; %[mol/m^3] Maximum concentration of Li in active material (Laresgoiti 2015 JPS)
+cPinit: 0.5*cPmax #;
+alphaP: 0 #;
+modEP: 15e9 #; % [Pa] Youngs modulus of active material (Laresgoiti 2015 JPS)
+nuP: 0.3 #; % [1] Poisson's ratio of active material (Laresgoiti 2015 JPS)
+omegaP: 3.1e-6 #; % [cm^3/mol] Partial molar volume of Li in active material (Laresgoiti 2015 JPS)
+RP: 9e-6 #; % [m] Radius of the active material (Laresgoiti 2015 JPS)
+
+#% % SEI properties
+alphaS: 0 #;
+modES: 0.5e9 #; % [Pa] Youngs modulus of SEI (Laresgoiti 2015 JPS)
+nuS: 0.2 # [1] Poisson's ratio of SEI (Laresgoiti 2015 JPS)
+omegaS: 0 # [cm^3/mol] Partial molar volume of Li in SEI (Laresgoiti 2015 JPS)
+#RS = RP + 0.2e-6; % [m] Radius of the SEI (Laresgoiti 2015 JPS)

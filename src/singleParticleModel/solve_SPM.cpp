@@ -51,26 +51,16 @@
 #define ONE  RCONST(1.0)
 #define TWO  RCONST(2.0)
 
-#define NUM_SPECIES  nSpecies                 /* number of species         */
-
-#define T0		ZERO                 /* initial time */
-#define NOUT	100                   /* number of output times */
-#define DT		RCONST(p_tTotal/NOUT)       /* number of seconds in two hours  */
+#define DT		RCONST(p_tTotal/p_NT)       /* number of seconds in two hours  */
 
 #define XMIN	ZERO                 /* grid boundaries in x  */
 #define XMAX    RCONST(ONE)
-#define XMID    RCONST(p_L/2)         /* grid midpoints in x,y */
 
-#define MX		100             /* MX = number of x mesh points */
-#define NSMX	NUM_SPECIES*MX             /* NSMX = NUM_SPECIES*MX */
+#define MR		100             /* MR = number of x mesh points */
 
 /* CVodeInit Constants */
 
-#define RTOL    RCONST(1.0e-12)    /* scalar relative tolerance */
-#define FLOOR   RCONST(1.0e-0)     /* value of C1 or C2 at which tolerances */
-/* change from relative to absolute      */
-#define ATOL    (RTOL*FLOOR)      /* scalar absolute tolerance */
-#define NEQ     (NUM_SPECIES*MX)  /* NEQ = number of equations */
+//#define NEQ     (nVariables*MR)  /* NEQ = number of equations */
 
 /* Linear Solver Loop Constants */
 
@@ -84,17 +74,16 @@
    mathematical 3-dimensional structure of the dependent variable vector
    to the underlying 1-dimensional storage. IJth is defined in order to
    write code which indexes into dense matrices with a (row,column)
-   pair, where 1 <= row, column <= NUM_SPECIES.
+   pair, where 1 <= row, column <= nVariables.
 
    IJth(vdata,i,j,k) references the element in the vdata array for
-   species i at mesh point (j,k), where 1 <= i <= NUM_SPECIES,
-   0 <= j <= MX-1, 0 <= k <= MY-1. The vdata array is obtained via
+   species i at mesh point (j,k), where 1 <= i <= nVariables,
+   0 <= j <= MR-1, 0 <= k <= MY-1. The vdata array is obtained via
    the call vdata = N_VGetArrayPointer(v), where v is an N_Vector.
    For each mesh point (j,k), the elements for species i and i+1 are
    contiguous within vdata.
  */
-
-#define IJth(vdata,i,j) (vdata[i-1 + (j)*NUM_SPECIES])
+#define IJth(vdata,i,j) (vdata[i-1 + (j)*nVariables])
 
 /* Type : UserData
    contains preconditioner blocks, pivot arrays, and problem constants */
@@ -104,32 +93,44 @@ typedef struct
 	realtype dx, hdcoA, hdcoB;
 } *UserData;
 
+size_t nVariables;                 /* number of variables */
 /* Private Helper Functions */
 
 static UserData AllocUserData(void);
 static void InitUserData(UserData data);
 static void FreeUserData(UserData data);
-static void SetInitialProfiles(N_Vector u, realtype dx);
+static void SetInitProfiles(N_Vector u);
+int runSolver();
 static void PrintOutput(void *cvode_mem, N_Vector u, realtype t, FILE *fp);
 static void PrintFinalStats(void *cvode_mem, int linsolver);
 static int check_flag(void *flagvalue, const char *funcname, int opt);
 
 /* Functions Called by the Solver */
 
-static int f(realtype t, N_Vector u, N_Vector udot, void *user_data);
+int (*f)(double, N_Vector, N_Vector, void *); /* solver right hand function template */
+static int fSPM(double t, N_Vector u, N_Vector udot, void *user_data);
+static int fSPMT(double t, N_Vector u, N_Vector udot, void *user_data);
 
 /* Main Program */
 
 int main(void)
 {
-	realtype abstol, reltol, t, tout;
+	int val = runSolver();
+}
+
+int runSolver()
+{
+	double t;
 	N_Vector u;
 	UserData data;
 	//SUNMatrix A;
 	SUNLinearSolver LS;
 	void *cvode_mem;
-	int iout, flag;
-
+	int flag;
+	size_t NEQ;  /* NEQ = number of equations */
+	std::string outFile;
+	size_t iout = 1;
+	FILE * pFile;
 
 	//A = NULL;
 	u = NULL;
@@ -138,16 +139,32 @@ int main(void)
 	cvode_mem = NULL;
 	try
 	{
+		switch(p_model)
+		{
+			case SPM:
+				f = &fSPM;
+				nVariables = 2;
+				pFile = fopen("outSPM.dat","w");
+				fprintf(pFile, "# t xLi_ca xLi_an V_ca V_an\n");
+				break;
+			case SPMT:
+				f = &fSPMT;
+				nVariables = 3;
+				pFile = fopen("outSPMT.dat","w");
+				fprintf(pFile, "# t xLi_ca xLi_an T V_ca V_an\n");
+				break;
+			default:
+				std::cout<<"Unknown model"<<std::endl;
+		}
+		NEQ = nVariables*MR;
+
 		/* Allocate memory, and set problem data, initial values, tolerances */
 		u = N_VNew_Serial(NEQ);
 		if(check_flag((void *)u, "N_VNew_Serial", 0)) return(1);
 		data = AllocUserData();
 		if(check_flag((void *)data, "AllocUserData", 2)) return(1);
 		InitUserData(data);
-		SetInitialProfiles(u, data->dx);
-		abstol=ATOL;
-		reltol=RTOL;
-
+		SetInitProfiles(u);
 		/* Call CVodeCreate to create the solver memory and specify the
 		 * Backward Differentiation Formula and the use of a Newton iteration */
 		cvode_mem = CVodeCreate(CV_BDF, CV_NEWTON);
@@ -158,14 +175,14 @@ int main(void)
 		if(check_flag(&flag, "CVodeSetUserData", 1)) return(1);
 
 		/* Call CVodeInit to initialize the integrator memory and specify the
-		 * user's right hand side function in u'=f(t,u), the inital time T0, and
+		 * user's right hand side function in u'=f(t,u), the inital time p_tInit, and
 		 * the initial dependent variable vector u. */
-		flag = CVodeInit(cvode_mem, f, T0, u);
+		flag = CVodeInit(cvode_mem, f, p_tInit, u);
 		if(check_flag(&flag, "CVodeInit", 1)) return(1);
 
 		/* Call CVodeSStolerances to specify the scalar relative tolerance
 		 * and scalar absolute tolerances */
-		flag = CVodeSStolerances(cvode_mem, reltol, abstol);
+		flag = CVodeSStolerances(cvode_mem, RTOL, ATOL);
 		if (check_flag(&flag, "CVodeSStolerances", 1)) return(1);
 
 		/* Call SUNSPGMR to specify the linear solver SPGMR with
@@ -178,7 +195,8 @@ int main(void)
 
 		/* Initialite Cantera */
 		initCanteraSPM();
-
+		//double test = IJth(u,3,1);
+		//std::cout<<nVariables<<" "<<test<<std::endl;
 		// 2nd
 		/* Create dense SUNMatrix for use in linear solves */
 		//A = SUNDenseMatrix(NEQ, NEQ);
@@ -196,9 +214,8 @@ int main(void)
 
 		/* In loop over output points, call CVode, print results, test for error */
 		printf(" \nLIB Single Particle Model\n\n");
-		FILE * pFile;
-		pFile = fopen ("myfile.txt","w");
-		for (iout=1, tout = DT; iout <= NOUT; iout++, tout += DT)
+
+		for (double tout = DT; iout <= p_NT; iout++, tout += DT)
 		{
 			flag = CVode(cvode_mem, tout, u, &t, CV_NORMAL);
 			PrintOutput(cvode_mem, u, t, pFile);
@@ -208,7 +225,7 @@ int main(void)
 		PrintFinalStats(cvode_mem, 0);
 
 		/* Free memory */
-		fclose (pFile);
+		fclose(pFile);
 		//Cantera::appdelete();
 		N_VDestroy(u);
 		FreeUserData(data);
@@ -237,9 +254,9 @@ static UserData AllocUserData(void)
 
 static void InitUserData(UserData data)
 {
-	data->dx = (XMAX-XMIN)/(MX-1); // jx = 0, x = XMIN, jx = 1, x = XMAX, x = XMIN + jx*dx
-	data->hdcoA = p_DLi_ca/SUNSQR(data->dx);
-	data->hdcoB = p_DLi_an/SUNSQR(data->dx);
+	data->dx = (XMAX-XMIN)/(MR-1); // jx = 0, x = XMIN, jx = 1, x = XMAX, x = XMIN + jx*dx
+	data->hdcoA = p_DLi_ca(Tref)/SUNSQR(data->dx);
+	data->hdcoB = p_DLi_an(Tref)/SUNSQR(data->dx);
 }
 
 /* Free data memory */
@@ -251,7 +268,7 @@ static void FreeUserData(UserData data)
 
 /* Set initial conditions in u */
 
-static void SetInitialProfiles(N_Vector u, realtype dx)
+static void SetInitProfiles(N_Vector u)
 {
 	realtype *udata;
 
@@ -259,10 +276,25 @@ static void SetInitialProfiles(N_Vector u, realtype dx)
 	udata = N_VGetArrayPointer(u);
 
 	/* Load initial profiles of cA and cB into u vector */
-	for (int jx=0; jx < MX; jx++)
+	switch (p_model)
 	{
-		IJth(udata,1,jx) = p_xLimin_ca;
-		IJth(udata,2,jx) = p_xLimax_an;
+	case SPM:
+		for (int jx=0; jx < MR; jx++)
+		{
+			IJth(udata,1,jx) = p_xLimin_ca;
+			IJth(udata,2,jx) = p_xLimax_an;
+		}
+		break;
+	case SPMT:
+		for (int jx=0; jx < MR; jx++)
+		{
+			IJth(udata,1,jx) = p_xLimin_ca;
+			IJth(udata,2,jx) = p_xLimax_an;
+			IJth(udata,3,jx) = p_Tamb;
+		}
+		break;
+	default:
+		std::cout<<"Unknown model"<<std::endl;
 	}
 }
 
@@ -272,7 +304,7 @@ static void PrintOutput(void *cvode_mem, N_Vector u, realtype t, FILE *fp)
 	long int nst;
 	int qu, flag;
 	realtype hu, *udata, potAN, potCA;
-	int mx1 = MX - 1;
+	int mx1 = MR - 1;
 
 	udata = N_VGetArrayPointer(u);
 
@@ -282,17 +314,20 @@ static void PrintOutput(void *cvode_mem, N_Vector u, realtype t, FILE *fp)
 	check_flag(&flag, "CVodeGetLastOrder", 1);
 	flag = CVodeGetLastStep(cvode_mem, &hu);
 	check_flag(&flag, "CVodeGetLastStep", 1);
-
-	Cantera::compositionMap speciesMoleFracCA;
-	Cantera::compositionMap speciesMoleFracAN;
-	speciesMoleFracCA[p_nameCathodeIntSpecies] = IJth(udata,1,mx1);
-	speciesMoleFracCA[p_nameCathodeVacSpecies] = 1-IJth(udata,1,mx1);
-	speciesMoleFracAN[p_nameAnodeIntSpecies] = IJth(udata,2,mx1);
-	speciesMoleFracAN[p_nameAnodeVacSpecies] = 1-IJth(udata,2,mx1);
-	potCA = calc_potCantera(0.0, p_nameCathodeSurf, speciesMoleFracCA);
-	potAN = calc_potCantera(0.0, p_nameAnodeSurf, speciesMoleFracAN);
-	fprintf (fp, "%.2e %12.3e %12.3e %12.3e %12.3e\n",t, IJth(udata,1,mx1), IJth(udata,2,mx1), potCA+3.0, potAN+3.0);
-
+	potCA = calc_potCantera(p_nameCathodeSurf, IJth(udata,1,mx1), p_Iapp*p_Rel(Tref), p_Iapp);
+	potAN = calc_potCantera(p_nameAnodeSurf, IJth(udata,2,mx1), 0.0, p_Iapp);
+	switch (p_model)
+	{
+	case SPM:
+		fprintf(fp, "%.2e %12.3e %12.3e %12.3e %12.3e\n",t, IJth(udata,1,mx1), IJth(udata,2,mx1), potCA+3.0, potAN+3.0);
+		break;
+	case SPMT:
+		fprintf(fp, "%.2e %12.3e %12.3e %12.3e %12.3e %12.3e\n",t, IJth(udata,1,mx1), IJth(udata,2,mx1), IJth(udata,3,mx1), potCA+3.0, potAN+3.0);
+		break;
+	default:
+		std::cout<<"Unknown model"<<std::endl;
+		break;
+	}
 }
 
 /* Get and print final statistics */
@@ -384,7 +419,7 @@ static int check_flag(void *flagvalue, const char *funcname, int opt)
 /* Functions called by the solver */
 
 /* f routine. Compute RHS function f(t,u). */
-static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
+static int fSPM(realtype t, N_Vector u, N_Vector udot, void *user_data)
 {
 	realtype cA, cB, cAlt, cBlt, cArt, cBrt;
 	realtype hordA, hordB;
@@ -399,7 +434,7 @@ static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
 
 	/* Loop over all grid points. */
 
-	for (jx=0; jx < MX; jx++) {
+	for (jx=0; jx < MR; jx++) {
 
 		/* Extract c1 and c2, and set kinetic rate terms. */
 		cA = IJth(udata,1,jx);
@@ -412,24 +447,24 @@ static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
 		 * c_j+1 - c_j-1 = -2dr*(rCa/(DCa*cMaxCa))*iApp/(n*F*sCa)
 		 * At r = 0; DdX/dr = 0
 		 * IJth(vdata,i,j,k) references the element in the vdata array for
-		 * species i at mesh point (j,k), where 1 <= i <= NUM_SPECIES,
-		 * 0 <= j <= MX-1, 0 <= k <= MY-1.
+		 * species i at mesh point (j,k), where 1 <= i <= nVariables,
+		 * 0 <= j <= MR-1, 0 <= k <= MY-1.
 		 */
 
 		cAlt = (jx == 0) ? IJth(udata,1,1) : IJth(udata,1,jx-1);
 		cBlt = (jx == 0) ? IJth(udata,2,1) : IJth(udata,2,jx-1);
-		cArt = (jx == MX-1) ? IJth(udata,1,MX-2) + TWO*data->dx*(p_rP_ca/(p_DLi_ca*p_csMax_ca))*(p_Iapp/(Faraday*p_S_ca)) : IJth(udata,1,jx+1);
-		cBrt = (jx == MX-1) ? IJth(udata,2,MX-2) - TWO*data->dx*(p_rP_an/(p_DLi_an*p_csMax_an))*(p_Iapp/(Faraday*p_S_an)) : IJth(udata,2,jx+1);
+		cArt = (jx == MR-1) ? IJth(udata,1,MR-2) - TWO*data->dx*(p_rP_ca/(p_DLi_ca(Tref)*p_csMax_ca))*(p_Iapp/(Faraday*p_S_ca)) : IJth(udata,1,jx+1);
+		cBrt = (jx == MR-1) ? IJth(udata,2,MR-2) + TWO*data->dx*(p_rP_an/(p_DLi_an(Tref)*p_csMax_an))*(p_Iapp/(Faraday*p_S_an)) : IJth(udata,2,jx+1);
 		//DA/SUNSQR(data->dx) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
-		hordA = p_DLi_ca/(TWO*jx*SUNSQR(data->dx))*((jx+2)*cArt - TWO*jx*cA + (jx-2)*cAlt)
-				+ p_DLi_ca/(TWO*SUNSQR(data->dx))*(cArt - cA)
-				- p_DLi_ca/(TWO*SUNSQR(data->dx))*(cA - cAlt);
-		hordcoA = (jx == 0) ? 6*p_DLi_ca/SUNSQR(data->dx)*(IJth(udata,1,1)-IJth(udata,1,0)) : hordA;
+		hordA = p_DLi_ca(Tref)/(TWO*jx*SUNSQR(data->dx))*((jx+2)*cArt - TWO*jx*cA + (jx-2)*cAlt)
+				+ p_DLi_ca(Tref)/(TWO*SUNSQR(data->dx))*(cArt - cA)
+				- p_DLi_ca(Tref)/(TWO*SUNSQR(data->dx))*(cA - cAlt);
+		hordcoA = (jx == 0) ? 6*p_DLi_ca(Tref)/SUNSQR(data->dx)*(IJth(udata,1,1)-IJth(udata,1,0)) : hordA;
 		//DB/SUNSQR(data->dx) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
-		hordB = p_DLi_an/(TWO*jx*SUNSQR(data->dx))*((jx+2)*cBrt - TWO*jx*cB + (jx-2)*cBlt)
-				+ p_DLi_an/(TWO*SUNSQR(data->dx))*(cBrt - cB)
-				- p_DLi_an/(TWO*SUNSQR(data->dx))*(cB - cBlt);
-		hordcoB = (jx == 0) ? 6*p_DLi_an/SUNSQR(data->dx)*(IJth(udata,1,2)-IJth(udata,1,0)) : hordB;
+		hordB = p_DLi_an(Tref)/(TWO*jx*SUNSQR(data->dx))*((jx+2)*cBrt - TWO*jx*cB + (jx-2)*cBlt)
+				+ p_DLi_an(Tref)/(TWO*SUNSQR(data->dx))*(cBrt - cB)
+				- p_DLi_an(Tref)/(TWO*SUNSQR(data->dx))*(cB - cBlt);
+		hordcoB = (jx == 0) ? 6*p_DLi_an(Tref)/SUNSQR(data->dx)*(IJth(udata,1,2)-IJth(udata,1,0)) : hordB;
 		/* Load all terms into udot. */
 		/*Equation: dci/dt = (Di*dci/dx)
 		 * dci/dt = Di*(c1rt - TWO*c1 + c1lt)/dx2
@@ -439,5 +474,83 @@ static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
 		IJth(dudata, 2, jx) = hordcoB/SUNSQR(p_rP_an);
 	}
 
+	return(0);
+}
+
+/* f routine. Compute RHS function f(t,u). */
+static int fSPMT(realtype t, N_Vector u, N_Vector udot, void *user_data)
+{
+	realtype cA, cB, cAlt, cBlt, cArt, cBrt;
+	realtype hordA, hordB;
+	realtype hordcoA, hordcoB;
+	realtype *udata, *dudata;
+	realtype qIrr, qRev, qOut, T;
+	realtype Uca, Uan, Ucell, Ueq, dUdTca, dUdTan;
+	int jx;
+	UserData data;
+
+	data   = (UserData) user_data;
+	udata  = N_VGetArrayPointer(u);
+	dudata = N_VGetArrayPointer(udot);
+
+	cA = IJth(udata,1,MR-1);
+	cB = IJth(udata,2,MR-1);
+	T = IJth(udata,3,MR-1);
+	Uca = calc_potCantera(p_nameCathodeSurf, cA, p_Iapp*p_Rel(T), p_Iapp, T);
+	Uan = calc_potCantera(p_nameAnodeSurf, cB, 0.0, p_Iapp, T);
+	Ucell = Uca - Uan;
+	Uca = calc_potCantera(p_nameCathodeSurf, cA, 0.0, 0.0, T);
+	Uan = calc_potCantera(p_nameAnodeSurf, cB, 0.0, 0.0, T);
+	Ueq = Uca - Uan;
+	dUdTca = calc_entropyCantera(p_nameCathodeSurf, cA, T)/Faraday;
+	dUdTan = calc_entropyCantera(p_nameAnodeSurf, cB, T)/Faraday;
+
+	/* Loop over all grid points. */
+
+	for (jx=0; jx < MR; jx++) {
+
+		/* Extract c1 and c2, and set kinetic rate terms. */
+		cA = IJth(udata,1,jx);
+		cB = IJth(udata,2,jx);
+		T = IJth(udata,3,jx);
+
+		//if (cA<0 || cB<0) return(1);
+
+		/* Set horizontal diffusion terms. */
+		/*
+		 * At r = 1; DdX/dr = Ri = -2dr*(rCa/(DCa*cMaxCa))*iApp/(n*F*sCa)
+		 * c_j+1 - c_j-1 = -2dr*(rCa/(DCa*cMaxCa))*iApp/(n*F*sCa)
+		 * At r = 0; DdX/dr = 0
+		 * IJth(vdata,i,j,k) references the element in the vdata array for
+		 * species i at mesh point (j,k), where 1 <= i <= nVariables,
+		 * 0 <= j <= MR-1, 0 <= k <= MY-1.
+		 */
+
+		cAlt = (jx == 0) ? IJth(udata,1,1) : IJth(udata,1,jx-1);
+		cBlt = (jx == 0) ? IJth(udata,2,1) : IJth(udata,2,jx-1);
+		cArt = (jx == MR-1) ? IJth(udata,1,MR-2) - TWO*data->dx*(p_rP_ca/(p_DLi_ca(Tref)*p_csMax_ca))*(p_Iapp/(Faraday*p_S_ca)) : IJth(udata,1,jx+1);
+		cBrt = (jx == MR-1) ? IJth(udata,2,MR-2) + TWO*data->dx*(p_rP_an/(p_DLi_an(Tref)*p_csMax_an))*(p_Iapp/(Faraday*p_S_an)) : IJth(udata,2,jx+1);
+		//DA/SUNSQR(data->dx) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
+		hordA = p_DLi_ca(Tref)/(TWO*jx*SUNSQR(data->dx))*((jx+2)*cArt - TWO*jx*cA + (jx-2)*cAlt)
+				+ p_DLi_ca(Tref)/(TWO*SUNSQR(data->dx))*(cArt - cA)
+				- p_DLi_ca(Tref)/(TWO*SUNSQR(data->dx))*(cA - cAlt);
+		hordcoA = (jx == 0) ? 6*p_DLi_ca(Tref)/SUNSQR(data->dx)*(IJth(udata,1,1)-IJth(udata,1,0)) : hordA;
+		//DB/SUNSQR(data->dx) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
+		hordB = p_DLi_an(Tref)/(TWO*jx*SUNSQR(data->dx))*((jx+2)*cBrt - TWO*jx*cB + (jx-2)*cBlt)
+				+ p_DLi_an(Tref)/(TWO*SUNSQR(data->dx))*(cBrt - cB)
+				- p_DLi_an(Tref)/(TWO*SUNSQR(data->dx))*(cB - cBlt);
+		hordcoB = (jx == 0) ? 6*p_DLi_an(Tref)/SUNSQR(data->dx)*(IJth(udata,1,2)-IJth(udata,1,0)) : hordB;
+		/* Load all terms into udot. */
+		/*Equation: dci/dt = (Di*dci/dx)
+		 * dci/dt = Di*(c1rt - TWO*c1 + c1lt)/dx2
+		 */
+		qIrr = p_Iapp*(Ucell-Ueq);
+		qRev = p_Iapp*T*(dUdTca-dUdTan);
+		qOut = p_hA*(T-p_Tamb);
+
+		IJth(dudata, 1, jx) = hordcoA/SUNSQR(p_rP_ca);
+		IJth(dudata, 2, jx) = hordcoB/SUNSQR(p_rP_an);
+		IJth(dudata, 3, jx) = 1/(p_rhoCell*p_volCell*p_cpCell)*(qIrr+qRev-qOut);
+	}
 	return(0);
 }

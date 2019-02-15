@@ -76,23 +76,26 @@ size_t getPhaseIdxbyName(std::string phaseName, Cantera::Interface *surface)
 	return -1;
 }
 
-double calc_potCantera(double phiL, std::string surfName, Cantera::compositionMap speciesMoleFrac)
+double calc_potCantera(std::string surfName, double xLi, double phiL, double I, double T)
 {
-	std::string s = "";
 	size_t idxElyte, idxElode;
-	double phiS = 1.0;
-
+	double phiS, guess = 1.0;
+	Cantera::compositionMap speciesMoleFrac;
 	try
 	{
 		if (surfName.compare(p_nameCathodeSurf)==0)
 		{
 			newSurf.surface = surfaceCA;
 			newSurf.pT = phaseType::CA;
+			speciesMoleFrac[p_nameCathodeIntSpecies] = xLi;
+			speciesMoleFrac[p_nameCathodeVacSpecies] = 1-xLi;
 		}
 		else if (surfName.compare(p_nameAnodeSurf)==0)
 		{
 			newSurf.surface = surfaceAN;
 			newSurf.pT = phaseType::AN;
+			speciesMoleFrac[p_nameAnodeIntSpecies] = xLi;
+			speciesMoleFrac[p_nameAnodeVacSpecies] = 1-xLi;
 		}
 		for (size_t k = 0; k < newSurf.surface->nPhases(); k++)
 		{
@@ -111,9 +114,53 @@ double calc_potCantera(double phiL, std::string surfName, Cantera::compositionMa
 
 		// Set the electrode and electrolyte potential
 		newSurf.surface->thermo(idxElyte).setElectricPotential(phiL);
-		phiS = NewtonSolver(&calc_ilocCantera, 0.1, p_Iapp);
+		phiS = NewtonSolver(&calc_ilocCantera, guess, -I);
 
 		return phiS;
+	}
+	catch (Cantera::CanteraError& err)
+	{
+		printf(err.what());
+		Cantera::appdelete();
+	}
+	return 0.0;
+}
+
+double calc_entropyCantera(std::string surfName, double xLi, double T)
+{
+	size_t idxElode;
+	Cantera::compositionMap speciesMoleFrac;
+
+	try
+	{
+		if (surfName.compare(p_nameCathodeSurf)==0)
+		{
+			newSurf.surface = surfaceCA;
+			newSurf.pT = phaseType::CA;
+			speciesMoleFrac[p_nameCathodeIntSpecies] = xLi;
+			speciesMoleFrac[p_nameCathodeVacSpecies] = 1-xLi;
+		}
+		else if (surfName.compare(p_nameAnodeSurf)==0)
+		{
+			newSurf.surface = surfaceAN;
+			newSurf.pT = phaseType::AN;
+			speciesMoleFrac[p_nameAnodeIntSpecies] = xLi;
+			speciesMoleFrac[p_nameAnodeVacSpecies] = 1-xLi;
+		}
+		for (size_t k = 0; k < newSurf.surface->nPhases(); k++)
+		{
+			newSurf.surface->thermo(k).setState_TP(T,P);
+			if (newSurf.surface->thermo(k).name().compare(p_nameCathodePhase)==0 || newSurf.surface->thermo(k).name().compare(p_nameAnodePhase)==0)
+			{
+				idxElode = k;
+			}
+		}
+		Cantera::vector_fp entropy(newSurf.surface->thermo(idxElode).nSpecies());
+		newSurf.surface->thermo(idxElode).setMoleFractionsByName(speciesMoleFrac);
+		newSurf.surface->thermo(idxElode).getEntropy_R(entropy.data());
+		entropy[0] = entropy[0]*Cantera::GasConstant
+				- Cantera::GasConstant*std::log(xLi/(1-xLi));
+		return entropy[0]*1e-3 ; // Convert from J/kmol/K to J/mol/K
 	}
 	catch (Cantera::CanteraError& err)
 	{

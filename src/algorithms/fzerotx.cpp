@@ -66,7 +66,7 @@ double fzerotx(double (*f) (const double), double ax, double bx)
 
 		// Convergence test and possible exit
 		m = 0.5*(a - b);
-		tol = 2.0*eps*(abs(b)>1.0)?abs(b):1;
+		tol = 2.0*eps*((abs(b)>1.0)?abs(b):1);
 		if ((abs(m) <= tol) || (fb == 0.0))
 			break;
 
