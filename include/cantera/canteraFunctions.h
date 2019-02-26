@@ -18,7 +18,7 @@
 #include "cantera/thermo/SurfPhase.h"
 #include "cantera/kinetics/importKinetics.h"
 
-enum phaseType {CA,EL,AN};
+enum phaseType {phCA,phEL,phAN};
 
 void initCanteraCV();
 void calc_ropCanteraCV_2s(doublereal cA, doublereal cB, doublereal t, doublereal *rop, doublereal phis);

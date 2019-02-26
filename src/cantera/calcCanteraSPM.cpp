@@ -45,7 +45,7 @@ double calc_ilocCantera(double phiS)
 {
 	double rop = 0.0;
 	size_t idx = 0;
-	double elodeArea = (newSurf.pT == phaseType::CA) ? p_S_ca:p_S_an;
+	double elodeArea = (newSurf.pT == phaseType::phCA) ? p_S_ca:p_S_an;
 
 	idx = getPhaseIdxbyName(p_nameConductorPhase, newSurf.surface);
 
@@ -86,14 +86,14 @@ double calc_potCantera(std::string surfName, double xLi, double phiL, double I, 
 		if (surfName.compare(p_nameCathodeSurf)==0)
 		{
 			newSurf.surface = surfaceCA;
-			newSurf.pT = phaseType::CA;
+			newSurf.pT = phaseType::phCA;
 			speciesMoleFrac[p_nameCathodeIntSpecies] = xLi;
 			speciesMoleFrac[p_nameCathodeVacSpecies] = 1-xLi;
 		}
 		else if (surfName.compare(p_nameAnodeSurf)==0)
 		{
 			newSurf.surface = surfaceAN;
-			newSurf.pT = phaseType::AN;
+			newSurf.pT = phaseType::phAN;
 			speciesMoleFrac[p_nameAnodeIntSpecies] = xLi;
 			speciesMoleFrac[p_nameAnodeVacSpecies] = 1-xLi;
 		}
@@ -136,14 +136,14 @@ double calc_entropyCantera(std::string surfName, double xLi, double T)
 		if (surfName.compare(p_nameCathodeSurf)==0)
 		{
 			newSurf.surface = surfaceCA;
-			newSurf.pT = phaseType::CA;
+			newSurf.pT = phaseType::phCA;
 			speciesMoleFrac[p_nameCathodeIntSpecies] = xLi;
 			speciesMoleFrac[p_nameCathodeVacSpecies] = 1-xLi;
 		}
 		else if (surfName.compare(p_nameAnodeSurf)==0)
 		{
 			newSurf.surface = surfaceAN;
-			newSurf.pT = phaseType::AN;
+			newSurf.pT = phaseType::phAN;
 			speciesMoleFrac[p_nameAnodeIntSpecies] = xLi;
 			speciesMoleFrac[p_nameAnodeVacSpecies] = 1-xLi;
 		}

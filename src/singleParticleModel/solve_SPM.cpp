@@ -41,9 +41,12 @@
 #include <sundials/sundials_math.h>      /* contains the macros ABS, SUNSQR, and EXP */
 #include <sunmatrix/sunmatrix_dense.h> /* access to dense SUNMatrix            */
 #include <sunlinsol/sunlinsol_dense.h> /* access to dense SUNLinearSolver      */
+#include <sunmatrix/sunmatrix_band.h>  /* access to band SUNMatrix             */
+#include <sunlinsol/sunlinsol_band.h>  /* access to band SUNLinearSolver       */
 #include <cvode/cvode_direct.h>        /* access to CVDls interface            */
 #include "cantera/canteraFunctions.h"
 #include "singleParticleModel/parameters_SPM.h"
+#include "solvep2D.h"
 
 /* Problem Constants */
 
@@ -90,7 +93,7 @@
 
 typedef struct
 {
-	realtype dx, hdcoA, hdcoB;
+	double dr,hdcoA,hdcoB;
 } *UserData;
 
 size_t nVariables;                 /* number of variables */
@@ -115,7 +118,8 @@ static int fSPMT(double t, N_Vector u, N_Vector udot, void *user_data);
 
 int main(void)
 {
-	int val = runSolver();
+	//int val = runSolver();
+	int val = runP2D();
 }
 
 int runSolver()
@@ -125,6 +129,7 @@ int runSolver()
 	UserData data;
 	//SUNMatrix A;
 	SUNLinearSolver LS;
+	SUNMatrix A;
 	void *cvode_mem;
 	int flag;
 	size_t NEQ;  /* NEQ = number of equations */
@@ -167,7 +172,7 @@ int runSolver()
 		SetInitProfiles(u);
 		/* Call CVodeCreate to create the solver memory and specify the
 		 * Backward Differentiation Formula and the use of a Newton iteration */
-		cvode_mem = CVodeCreate(CV_BDF, CV_NEWTON);
+		cvode_mem = CVodeCreate(CV_BDF);
 		if(check_flag((void *)cvode_mem, "CVodeCreate", 0)) return(1);
 
 		/* Set the pointer to user-defined data */
@@ -187,10 +192,19 @@ int runSolver()
 
 		/* Call SUNSPGMR to specify the linear solver SPGMR with
          left preconditioning and the default maximum Krylov dimension */
-		LS = SUNSPGMR(u, PREC_NONE, 0);
-		if(check_flag((void *)LS, "SUNSPGMR", 0)) return(1);
+		//LS = SUNSPGMR(u, PREC_NONE, 0);
+		//if(check_flag((void *)LS, "SUNSPGMR", 0)) return(1);
 
-		flag = CVSpilsSetLinearSolver(cvode_mem, LS);
+		/* Create banded SUNMatrix for use in linear solves */
+		A = SUNBandMatrix(NEQ, MR, MR);
+		if(check_flag((void *)A, "SUNBandMatrix", 0)) return(1);
+
+		/* Create banded SUNLinearSolver object */
+		LS = SUNLinSol_Band(u, A);
+		if(check_flag((void *)LS, "SUNLinSol_Band", 0)) return(1);
+
+		flag = CVodeSetLinearSolver(cvode_mem, LS, A);
+		//flag = CVSpilsSetLinearSolver(cvode_mem, LS);
 		if(check_flag(&flag, "CVSpilsSetLinearSolver", 1)) return 1;
 
 		/* Initialite Cantera */
@@ -254,9 +268,9 @@ static UserData AllocUserData(void)
 
 static void InitUserData(UserData data)
 {
-	data->dx = (XMAX-XMIN)/(MR-1); // jx = 0, x = XMIN, jx = 1, x = XMAX, x = XMIN + jx*dx
-	data->hdcoA = p_DLi_ca(Tref)/SUNSQR(data->dx);
-	data->hdcoB = p_DLi_an(Tref)/SUNSQR(data->dx);
+	data->dr = (XMAX-XMIN)/(MR-1); // jx = 0, x = XMIN, jx = 1, x = XMAX, x = XMIN + jx*dx
+	data->hdcoA = p_DLi_ca(Tref)/SUNSQR(data->dr);
+	data->hdcoB = p_DLi_an(Tref)/SUNSQR(data->dr);
 }
 
 /* Free data memory */
@@ -453,18 +467,18 @@ static int fSPM(realtype t, N_Vector u, N_Vector udot, void *user_data)
 
 		cAlt = (jx == 0) ? IJth(udata,1,1) : IJth(udata,1,jx-1);
 		cBlt = (jx == 0) ? IJth(udata,2,1) : IJth(udata,2,jx-1);
-		cArt = (jx == MR-1) ? IJth(udata,1,MR-2) - TWO*data->dx*(p_rP_ca/(p_DLi_ca(Tref)*p_csMax_ca))*(p_Iapp/(Faraday*p_S_ca)) : IJth(udata,1,jx+1);
-		cBrt = (jx == MR-1) ? IJth(udata,2,MR-2) + TWO*data->dx*(p_rP_an/(p_DLi_an(Tref)*p_csMax_an))*(p_Iapp/(Faraday*p_S_an)) : IJth(udata,2,jx+1);
-		//DA/SUNSQR(data->dx) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
-		hordA = p_DLi_ca(Tref)/(TWO*jx*SUNSQR(data->dx))*((jx+2)*cArt - TWO*jx*cA + (jx-2)*cAlt)
-				+ p_DLi_ca(Tref)/(TWO*SUNSQR(data->dx))*(cArt - cA)
-				- p_DLi_ca(Tref)/(TWO*SUNSQR(data->dx))*(cA - cAlt);
-		hordcoA = (jx == 0) ? 6*p_DLi_ca(Tref)/SUNSQR(data->dx)*(IJth(udata,1,1)-IJth(udata,1,0)) : hordA;
-		//DB/SUNSQR(data->dx) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
-		hordB = p_DLi_an(Tref)/(TWO*jx*SUNSQR(data->dx))*((jx+2)*cBrt - TWO*jx*cB + (jx-2)*cBlt)
-				+ p_DLi_an(Tref)/(TWO*SUNSQR(data->dx))*(cBrt - cB)
-				- p_DLi_an(Tref)/(TWO*SUNSQR(data->dx))*(cB - cBlt);
-		hordcoB = (jx == 0) ? 6*p_DLi_an(Tref)/SUNSQR(data->dx)*(IJth(udata,1,2)-IJth(udata,1,0)) : hordB;
+		cArt = (jx == MR-1) ? IJth(udata,1,MR-2) - TWO*data->dr*(p_rP_ca/(p_DLi_ca(Tref)*p_csMax_ca))*(p_Iapp/(Faraday*p_S_ca)) : IJth(udata,1,jx+1);
+		cBrt = (jx == MR-1) ? IJth(udata,2,MR-2) + TWO*data->dr*(p_rP_an/(p_DLi_an(Tref)*p_csMax_an))*(p_Iapp/(Faraday*p_S_an)) : IJth(udata,2,jx+1);
+		//DA/SUNSQR(data->dr) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
+		hordA = p_DLi_ca(Tref)/(TWO*jx*SUNSQR(data->dr))*((jx+2)*cArt - TWO*jx*cA + (jx-2)*cAlt)
+				+ p_DLi_ca(Tref)/(TWO*SUNSQR(data->dr))*(cArt - cA)
+				- p_DLi_ca(Tref)/(TWO*SUNSQR(data->dr))*(cA - cAlt);
+		hordcoA = (jx == 0) ? 6*p_DLi_ca(Tref)/SUNSQR(data->dr)*(IJth(udata,1,1)-IJth(udata,1,0)) : hordA;
+		//DB/SUNSQR(data->dr) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
+		hordB = p_DLi_an(Tref)/(TWO*jx*SUNSQR(data->dr))*((jx+2)*cBrt - TWO*jx*cB + (jx-2)*cBlt)
+				+ p_DLi_an(Tref)/(TWO*SUNSQR(data->dr))*(cBrt - cB)
+				- p_DLi_an(Tref)/(TWO*SUNSQR(data->dr))*(cB - cBlt);
+		hordcoB = (jx == 0) ? 6*p_DLi_an(Tref)/SUNSQR(data->dr)*(IJth(udata,1,2)-IJth(udata,1,0)) : hordB;
 		/* Load all terms into udot. */
 		/*Equation: dci/dt = (Di*dci/dx)
 		 * dci/dt = Di*(c1rt - TWO*c1 + c1lt)/dx2
@@ -528,18 +542,18 @@ static int fSPMT(realtype t, N_Vector u, N_Vector udot, void *user_data)
 
 		cAlt = (jx == 0) ? IJth(udata,1,1) : IJth(udata,1,jx-1);
 		cBlt = (jx == 0) ? IJth(udata,2,1) : IJth(udata,2,jx-1);
-		cArt = (jx == MR-1) ? IJth(udata,1,MR-2) - TWO*data->dx*(p_rP_ca/(p_DLi_ca(Tref)*p_csMax_ca))*(p_Iapp/(Faraday*p_S_ca)) : IJth(udata,1,jx+1);
-		cBrt = (jx == MR-1) ? IJth(udata,2,MR-2) + TWO*data->dx*(p_rP_an/(p_DLi_an(Tref)*p_csMax_an))*(p_Iapp/(Faraday*p_S_an)) : IJth(udata,2,jx+1);
-		//DA/SUNSQR(data->dx) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
-		hordA = p_DLi_ca(Tref)/(TWO*jx*SUNSQR(data->dx))*((jx+2)*cArt - TWO*jx*cA + (jx-2)*cAlt)
-				+ p_DLi_ca(Tref)/(TWO*SUNSQR(data->dx))*(cArt - cA)
-				- p_DLi_ca(Tref)/(TWO*SUNSQR(data->dx))*(cA - cAlt);
-		hordcoA = (jx == 0) ? 6*p_DLi_ca(Tref)/SUNSQR(data->dx)*(IJth(udata,1,1)-IJth(udata,1,0)) : hordA;
-		//DB/SUNSQR(data->dx) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
-		hordB = p_DLi_an(Tref)/(TWO*jx*SUNSQR(data->dx))*((jx+2)*cBrt - TWO*jx*cB + (jx-2)*cBlt)
-				+ p_DLi_an(Tref)/(TWO*SUNSQR(data->dx))*(cBrt - cB)
-				- p_DLi_an(Tref)/(TWO*SUNSQR(data->dx))*(cB - cBlt);
-		hordcoB = (jx == 0) ? 6*p_DLi_an(Tref)/SUNSQR(data->dx)*(IJth(udata,1,2)-IJth(udata,1,0)) : hordB;
+		cArt = (jx == MR-1) ? IJth(udata,1,MR-2) - TWO*data->dr*(p_rP_ca/(p_DLi_ca(Tref)*p_csMax_ca))*(p_Iapp/(Faraday*p_S_ca)) : IJth(udata,1,jx+1);
+		cBrt = (jx == MR-1) ? IJth(udata,2,MR-2) + TWO*data->dr*(p_rP_an/(p_DLi_an(Tref)*p_csMax_an))*(p_Iapp/(Faraday*p_S_an)) : IJth(udata,2,jx+1);
+		//DA/SUNSQR(data->dr) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
+		hordA = p_DLi_ca(Tref)/(TWO*jx*SUNSQR(data->dr))*((jx+2)*cArt - TWO*jx*cA + (jx-2)*cAlt)
+				+ p_DLi_ca(Tref)/(TWO*SUNSQR(data->dr))*(cArt - cA)
+				- p_DLi_ca(Tref)/(TWO*SUNSQR(data->dr))*(cA - cAlt);
+		hordcoA = (jx == 0) ? 6*p_DLi_ca(Tref)/SUNSQR(data->dr)*(IJth(udata,1,1)-IJth(udata,1,0)) : hordA;
+		//DB/SUNSQR(data->dr) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
+		hordB = p_DLi_an(Tref)/(TWO*jx*SUNSQR(data->dr))*((jx+2)*cBrt - TWO*jx*cB + (jx-2)*cBlt)
+				+ p_DLi_an(Tref)/(TWO*SUNSQR(data->dr))*(cBrt - cB)
+				- p_DLi_an(Tref)/(TWO*SUNSQR(data->dr))*(cB - cBlt);
+		hordcoB = (jx == 0) ? 6*p_DLi_an(Tref)/SUNSQR(data->dr)*(IJth(udata,1,2)-IJth(udata,1,0)) : hordB;
 		/* Load all terms into udot. */
 		/*Equation: dci/dt = (Di*dci/dx)
 		 * dci/dt = Di*(c1rt - TWO*c1 + c1lt)/dx2

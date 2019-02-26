@@ -14,6 +14,7 @@
 #include "yaml-cpp/yaml.h"
 
 enum modelType {SPM,SPMT,SPMe,SPMeT};
+enum domainType {AL,CA,EL,AN,CU};
 
 int const Faraday = 96485; // [C/mol] "Faraday constant"
 double const R = 8.314; // [J/(mol.K)] "Universal gas constant"
@@ -23,13 +24,14 @@ double const P = 101325.0; // [Pa] Pressure
 std::string const paramFile = "data/parameters_SPM.yaml"; // XML file name
 YAML::Node const static params = YAML::LoadFile(paramFile);
 
-// Load model type
+// Load model parameters
 modelType const p_model = static_cast<modelType>(params["model"].as<int>()); // Model type
 
 size_t const p_NT = params["tSteps"].as<double>();
 size_t const p_NR = params["rSteps"].as<double>();
 double const RTOL = params["aTol"].as<double>();    /* scalar relative tolerance */
 double const ATOL = params["rTol"].as<double>();      /* scalar absolute tolerance */
+YAML::Node const grids = params["grid"];
 
 // Load cantera parameters
 std::string const p_inputFile = params["inputFile"].as<std::string>(); // XML file name
@@ -52,11 +54,29 @@ double const p_tInit = params["tStart"].as<double>();
 double const p_tTotal = 3600/abs(p_cR); // [s] "Total runtime"
 double const p_Tamb = params["T_amb"].as<double>(); // [K] "Ambient temperature"
 
+double const p_h = 1; //[W/m2K]
+// Thermal conductivities [ W / (m K) ]
+
+// Aluminium current collector
+double const p_kappa_al = 237;  // From material datasheets and standard scientific tables
+// Positive electrode
+double const p_kappa_ca  = 2.1;
+// Separator
+double const p_kappa_el  = 0.16;
+// Negative Electrode
+double const p_kappa_an  = 1.7;
+// Copper current collector
+double const p_kappa_cu = 401;  // From material datasheets and standard scientific tables
+
+//Current collector conductivities [S/m]
+double const p_sig_al = 3.55e7;
+double const p_sig_cu = 5.96e7;
+
 // Cell parameters
-double const p_L_sep = params["L_sep"].as<double>(); // [m] "Separator thickness"
-double const p_L_ca = params["L_ca"].as<double>();   // [m] "Cathode thickness"
-double const p_L_an = params["L_an"].as<double>();   // [m] "Anode thickness"
-double const p_L_cell = p_L_ca + p_L_sep + p_L_an;   // [m] "Cell thickness"
+double const p_Lsep = params["L_sep"].as<double>(); // [m] "Separator thickness"
+double const p_Lca = params["L_ca"].as<double>();   // [m] "Cathode thickness"
+double const p_Lan = params["L_an"].as<double>();   // [m] "Anode thickness"
+double const p_Lcell = p_Lca + p_Lsep + p_Lan;   // [m] "Cell thickness"
 double const p_rhoCell = params["rhoCell"].as<double>(); // [kg/m3] "Cell density"
 double const p_volCell = params["volCell"].as<double>(); // [m3] "Cell volume"
 double const p_cpCell = params["cpCell"].as<double>(); // [J/(kg.K)] "Cell heat capacity"
@@ -71,6 +91,7 @@ double const p_Ediff_ca = params["Ediff_ca"].as<double>(); // [kJ/mol] "Cathode 
 inline double const p_DLi_ca(double T) {return p_DLiref_ca*std::exp(p_Ediff_ca/R*(1/T-1/Tref));}; // [m^2/s] "Solid phase Li-diffusivity LCO"
 double const p_csMax_ca = params["csMax_ca"].as<double>(); // [mol/m^3] "Max solid phase concentration cathode"
 double const p_S_ca = params["S_ca"].as<double>();
+double const p_eps_ca = 0.3;
 
 // Anode material parameters
 double const p_rP_an = params["rP_an"].as<double>();    // [m] "Particle radius anode"
@@ -85,6 +106,7 @@ double const p_S_an = params["S_an"].as<double>();
 // Electrolyte material parameters
 double const p_cE = params["cE"].as<double>(); // [mol/m^3] "Electrolyte concentration"
 double const p_cE_ref = params["cE_ref"].as<double>(); // [mol/m^3] "Electrolyte reference concentration"
+double const p_tp = 0.3; // [] Transference number
 
 double const p_theta1 = (-5.636e-7*abs(p_Iapp) - 7.283e-6)*pow((p_Tamb - 273.15),3)
    + (5.676e-5*abs(p_Iapp) + 6.453e-4)*pow((p_Tamb - 273.15),2)
@@ -115,4 +137,172 @@ double const p_nuS = params["nuS"].as<double>(); // [1] Poisson's ratio of SEI (
 double const p_omegaS = params["omegaS"].as<double>(); // [cm^3/mol] Partial molar volume of Li in SEI (Laresgoiti 2015 JPS)
 double const p_RS = p_RP + 0.2e-6; // [m] Radius of the SEI (Laresgoiti 2015 JPS)
 
+typedef struct
+{
+	domainType domType;
+	size_t NX,idx0,idxL;
+	double L;
+	double dx;
+	double rho;
+	double por;
+	double cP;
+	double kappaL;
+	double sigmaL;
+	double diffL;
+	double kappaS;
+	double sigmaS;
+	double diffS;
+	double rP;
+	double xLiInit;
+	double aLi;
+} domain;
+
+domain const al =
+{
+	.domType = domainType::AL,
+	.NX = grids[0].as<size_t>(),
+	.idx0 = 0,
+	.idxL = al.NX-1,
+	.L = params["Aluminium"]["thickness"].as<double>(),
+	.dx = al.L/al.NX,
+	.rho = params["Aluminium"]["density"].as<double>(),
+	.por = params["Aluminium"]["porosity"].as<double>(),
+	.cP = params["Aluminium"]["cP"].as<double>(),
+	.kappaL = 0.0,
+	.sigmaL = 0.0,
+	.diffL= 0.0,
+	.kappaS = params["Aluminium"]["kappaS"].as<double>(),
+	.sigmaS = params["Aluminium"]["sigmaS"].as<double>(),
+	.diffS= 0.0,
+	.rP= 0.0,
+	.xLiInit = 0.0,
+	.aLi = 0.0
+};
+
+domain const ca =
+{
+	.domType = domainType::CA,
+	.NX = grids[1].as<size_t>(),
+	.idx0 = al.idxL+1,
+	.idxL = al.idxL+ca.NX,
+	.L = params["Cathode"]["thickness"].as<double>(),
+	.dx = ca.L/ca.NX,
+	.rho = params["Cathode"]["density"].as<double>(),
+	.por = params["Cathode"]["porosity"].as<double>(),
+	.cP = params["Cathode"]["cP"].as<double>(),
+	.kappaL = 0.0,
+	.sigmaL = 0.0,
+	.diffL= p_DLi,
+	.kappaS = params["Cathode"]["kappaS"].as<double>(),
+	.sigmaS = params["Cathode"]["sigmaS"].as<double>(),
+	.diffS = params["Cathode"]["diffS"].as<double>(),
+	.rP = params["Cathode"]["rP"].as<double>(),
+	.xLiInit = params["Cathode"]["xLiInit"].as<double>(),
+	.aLi = params["Cathode"]["aLi"].as<double>()
+};
+
+domain const el =
+{
+	.domType = domainType::EL,
+	.NX = grids[2].as<size_t>(),
+	.idx0 = ca.idxL+1,
+	.idxL = ca.idxL+el.NX,
+	.L = params["Separator"]["thickness"].as<double>(),
+	.dx = el.L/el.NX,
+	.rho = params["Separator"]["density"].as<double>(),
+	.por = params["Separator"]["porosity"].as<double>(),
+	.cP = params["Separator"]["cP"].as<double>(),
+	.kappaL = 0.0,
+	.sigmaL = 0.0,
+	.diffL = p_DLi,
+	.kappaS = params["Separator"]["kappaS"].as<double>(),
+	.sigmaS = params["Separator"]["sigmaS"].as<double>(),
+	.diffS = 0.0,
+	.rP = 0.0,
+	.xLiInit = 0.0,
+	.aLi = 0.0
+};
+
+domain const an =
+{
+	.domType = domainType::AN,
+	.NX = grids[3].as<size_t>(),
+	.idx0 = el.idxL+1,
+	.idxL = el.idxL+an.NX,
+	.L = params["Anode"]["thickness"].as<double>(),
+	.dx = an.L/an.NX,
+	.rho = params["Anode"]["density"].as<double>(),
+	.por = params["Anode"]["porosity"].as<double>(),
+	.cP = params["Anode"]["cP"].as<double>(),
+	.kappaL = 0.0,
+	.sigmaL = 0.0,
+	.diffL = p_DLi,
+	.kappaS = params["Anode"]["kappaS"].as<double>(),
+	.sigmaS = params["Anode"]["sigmaS"].as<double>(),
+	.diffS = params["Anode"]["diffS"].as<double>(),
+	.rP = params["Anode"]["rP"].as<double>(),
+	.xLiInit = params["Anode"]["xLiInit"].as<double>(),
+	.aLi = params["Anode"]["aLi"].as<double>()
+};
+
+domain const cu =
+{
+	.domType = domainType::CU,
+	.NX = grids[4].as<size_t>(),
+	.idx0 = an.idxL+1,
+	.idxL = an.idxL+cu.NX,
+	.L = params["Copper"]["thickness"].as<double>(),
+	.dx = an.L/an.NX,
+	.rho = params["Copper"]["density"].as<double>(),
+	.por = params["Copper"]["porosity"].as<double>(),
+	.cP = params["Copper"]["cP"].as<double>(),
+	.kappaL = 0.0,
+	.sigmaL = 0.0,
+	.diffL = 0.0,
+	.kappaS = params["Copper"]["kappaS"].as<double>(),
+	.sigmaS = params["Copper"]["sigmaS"].as<double>(),
+	.diffS = 0.0,
+	.rP = 0.0,
+	.xLiInit = 0.0,
+	.aLi = 0.0
+};
+
+size_t const NXTOTAL = al.NX+ca.NX+el.NX+an.NX+cu.NX;
+
+static domain getDomain(size_t jx)
+{
+	if (jx >= al.idx0 && jx <= al.idxL) return al;
+	if (jx >= ca.idx0 && jx <= ca.idxL) return ca;
+	if (jx >= el.idx0 && jx <= el.idxL) return el;
+	if (jx >= an.idx0 && jx <= an.idxL) return an;
+	if (jx >= cu.idx0 && jx <= cu.idxL) return cu;
+	else std::cout<<"getDomain: Unknown grid index "<<jx<<std::endl;
+	return al;
+}
+static double kappaS(size_t ix)
+{
+	if (ix < al.idx0) return al.kappaS;
+	if (ix >= cu.idxL) return cu.kappaS;
+	double beta = (getDomain(ix)).dx/((getDomain(ix)).dx+(getDomain(ix+1)).dx);
+	return (getDomain(ix)).kappaS*(getDomain(ix+1)).kappaS/
+			(beta*(getDomain(ix+1)).kappaS+(1-beta)*(getDomain(ix)).kappaS);
+}
+static double sigmaS(size_t ix)
+{
+	if (ix < al.idx0) return al.sigmaS;
+	if (ix >= cu.idxL) return cu.sigmaS;
+	double beta = (getDomain(ix)).dx/((getDomain(ix)).dx+(getDomain(ix+1)).dx);
+	return (getDomain(ix)).sigmaS*(getDomain(ix+1)).sigmaS/
+			(beta*(getDomain(ix+1)).sigmaS+(1-beta)*(getDomain(ix)).sigmaS);
+}
+static double dx2(size_t ix)
+{
+	if (ix < al.idx0) return al.dx*al.dx;
+	if (ix >= cu.idxL) return cu.dx*cu.dx;
+	return (getDomain(ix)).dx*(getDomain(ix+1)).dx;
+}
+static double diffL(size_t ix)
+{
+	return p_DLi;
+}
 #endif /* PARAMETERS_SPM_H_ */
