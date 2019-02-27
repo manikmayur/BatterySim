@@ -186,6 +186,7 @@ int runP2D(void)
 	files[data->idxCe-1] = fopen("outP2D_concElyte.dat","w");
 	files[data->idxT-1] = fopen("outP2D_Temperature.dat","w");
 	files[data->idxphiS-1] = fopen("outP2D_phiS.dat","w");
+	files[data->idxphiL-1] = fopen("outP2D_phiL.dat","w");
 
 	printOutputP2D(mem, t0, uu, files, data);
 
@@ -210,6 +211,7 @@ int runP2D(void)
 	fclose(files[data->idxCe-1]);
 	fclose(files[data->idxT-1]);
 	fclose(files[data->idxphiS-1]);
+	fclose(files[data->idxphiL-1]);
 	IDAFree(&mem);
 	SUNLinSolFree(LS);
 	SUNMatDestroy(A);
@@ -241,13 +243,17 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 {
 	realtype *udata, *updata, *resv;
 	realtype Cs, CsAvg, Ce, Celt, Cert, T, Tlt, Trt;
-	realtype phiS, phiSlt, phiSrt, diff_phiS, sphiS=0.0;
-	realtype phiL, phiLlt, phiLrt, diff_phiL1, diff_phiL2, sphiL=0.0, g;
-	realtype diff_T, diff_Ce, sCe=0.0, sCs=0.0, sCsAvg=0.0;
-	realtype qIrr, qRev, qOut, qTot=0.0, qOhm;
+	realtype phiS, phiSlt, phiSrt, diff_phiS;
+	realtype phiL, phiLlt, phiLrt, diff_phiL1, diff_phiL2, g;
+	realtype diff_T, diff_Ce, sCe, sCs, sCsAvg, sphiS, sphiL;
+	realtype qIrr, qRev, qOut, qTot, qOhm;
 	realtype Uca, Uan, Ucell, Ueq, dUdTca, dUdTan, iloc=0.0;
 	domain dom;
 	UserData data;
+
+	Uca=Uan=Ucell=Ueq=dUdTca=dUdTan=ZERO;
+	qIrr=qRev=qOut=qTot=qOhm=ZERO;
+	sCe=sCs=sCsAvg=sphiS=sphiL=ZERO;
 
 	udata = N_VGetArrayPointer(uu);
 	updata = N_VGetArrayPointer(up);
@@ -405,10 +411,11 @@ static void printOutputP2D(void *mem, realtype t, N_Vector uu, std::vector<FILE*
 		domain dom = getDomain(jx);
 		x = (jx == 0) ? (x+dom.dx/2):(x+dom.dx);
 		fprintf(fp[data->idxCsAvg-1],"%.2e %I64u %12.7e %12.3e\n",t, jx, x, IJth(udata,data->idxCsAvg,jx));
-		//fprintf(fp[data->idxCs-1],"%.2e %I64u %12.7e %12.3e\n",t, jx, x, IJth(udata,data->idxCs,jx));
+		fprintf(fp[data->idxCs-1],"%.2e %I64u %12.7e %12.3e\n",t, jx, x, IJth(udata,data->idxCs,jx));
 		fprintf(fp[data->idxCe-1],"%.2e %I64u %12.7e %12.3e\n",t, jx, x, IJth(udata,data->idxCe,jx));
 		fprintf(fp[data->idxT-1],"%.2e %I64u %12.7e %12.3e\n",t, jx, x, IJth(udata,data->idxT,jx));
-		//fprintf(fp[data->idxCsAvg-1],"%.2e %I64u %12.7e %12.3e\n",t, jx, x, IJth(udata,data->idxphiS,jx));
+		fprintf(fp[data->idxphiS-1],"%.2e %I64u %12.7e %12.3e\n",t, jx, x, IJth(udata,data->idxphiS,jx));
+		fprintf(fp[data->idxphiL-1],"%.2e %I64u %12.7e %12.3e\n",t, jx, x, IJth(udata,data->idxphiL,jx));
 	}
 }
 
