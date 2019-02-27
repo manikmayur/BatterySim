@@ -332,18 +332,16 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		//qRev = p_Iapp*T*(dUdTca-dUdTan);
 		qOut = p_h*(T-p_Tamb);
 
-		//iloc = TWO*dom.sigmaL*dom.cLiMax*std::sqrt(Ce*(1-Cs)*Cs)*std::sinh(0.5*R/(F*T)*(phiS-phiL-Ueq));
-		iloc = ZERO;
+		iloc = TWO*dom.sigmaL*dom.cLiMax*std::sqrt(Ce*(1-Cs)*Cs)*std::sinh(0.5*R/(F*T)*(phiS-phiL-Ueq));
+		iloc = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
+				ZERO:ZERO;
 		sCsAvg = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:-3.0*iloc/dom.rP;
 		sCs = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:-dom.rP*iloc/(dom.diffS*5);
-		sCe = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
-				ZERO:dom.aLi*(1-p_tp)*iloc;
-		sphiS = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
-				ZERO:dom.aLi*F*iloc;
-		sphiL = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
-				ZERO:dom.aLi*F*iloc;
+		sCe = dom.aLi*(1-p_tp)*iloc;
+		sphiS = dom.aLi*F*iloc;
+		sphiL = -dom.aLi*F*iloc;
 
 		//
 
