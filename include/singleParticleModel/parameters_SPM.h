@@ -16,7 +16,7 @@
 enum modelType {SPM,SPMT,SPMe,SPMeT};
 enum domainType {AL,CA,EL,AN,CU};
 
-int const Faraday = 96485; // [C/mol] "Faraday constant"
+int const F = 96485; // [C/mol] "Faraday constant"
 double const R = 8.314; // [J/(mol.K)] "Universal gas constant"
 double const Tref = 298.15; // [K] Reference temperature
 double const P = 101325.0; // [Pa] Pressure
@@ -154,6 +154,7 @@ typedef struct
 	double diffS;
 	double rP;
 	double xLiInit;
+	double cLiMax;
 	double aLi;
 } domain;
 
@@ -176,6 +177,7 @@ domain const al =
 	.diffS= 0.0,
 	.rP= 0.0,
 	.xLiInit = 0.0,
+	.cLiMax = 0.0,
 	.aLi = 0.0
 };
 
@@ -198,6 +200,7 @@ domain const ca =
 	.diffS = params["Cathode"]["diffS"].as<double>(),
 	.rP = params["Cathode"]["rP"].as<double>(),
 	.xLiInit = params["Cathode"]["xLiInit"].as<double>(),
+	.cLiMax = params["Cathode"]["cLiMax"].as<double>(),
 	.aLi = params["Cathode"]["aLi"].as<double>()
 };
 
@@ -220,6 +223,7 @@ domain const el =
 	.diffS = 0.0,
 	.rP = 0.0,
 	.xLiInit = 0.0,
+	.cLiMax = 0.0,
 	.aLi = 0.0
 };
 
@@ -242,6 +246,7 @@ domain const an =
 	.diffS = params["Anode"]["diffS"].as<double>(),
 	.rP = params["Anode"]["rP"].as<double>(),
 	.xLiInit = params["Anode"]["xLiInit"].as<double>(),
+	.cLiMax = params["Anode"]["cLiMax"].as<double>(),
 	.aLi = params["Anode"]["aLi"].as<double>()
 };
 
@@ -264,6 +269,7 @@ domain const cu =
 	.diffS = 0.0,
 	.rP = 0.0,
 	.xLiInit = 0.0,
+	.cLiMax = 0.0,
 	.aLi = 0.0
 };
 
@@ -294,6 +300,13 @@ static double sigmaS(size_t ix)
 	double beta = (getDomain(ix)).dx/((getDomain(ix)).dx+(getDomain(ix+1)).dx);
 	return (getDomain(ix)).sigmaS*(getDomain(ix+1)).sigmaS/
 			(beta*(getDomain(ix+1)).sigmaS+(1-beta)*(getDomain(ix)).sigmaS);
+}
+static double sigmaL(size_t ix)
+{
+	if (ix < ca.idx0 || ix > an.idxL) return 0.0;
+	double beta = (getDomain(ix)).dx/((getDomain(ix)).dx+(getDomain(ix+1)).dx);
+	return (getDomain(ix)).sigmaL*(getDomain(ix+1)).sigmaS/
+			(beta*(getDomain(ix+1)).sigmaL+(1-beta)*(getDomain(ix)).sigmaL);
 }
 static double dx2(size_t ix)
 {

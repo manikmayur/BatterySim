@@ -467,8 +467,8 @@ static int fSPM(realtype t, N_Vector u, N_Vector udot, void *user_data)
 
 		cAlt = (jx == 0) ? IJth(udata,1,1) : IJth(udata,1,jx-1);
 		cBlt = (jx == 0) ? IJth(udata,2,1) : IJth(udata,2,jx-1);
-		cArt = (jx == MR-1) ? IJth(udata,1,MR-2) - TWO*data->dr*(p_rP_ca/(p_DLi_ca(Tref)*p_csMax_ca))*(p_Iapp/(Faraday*p_S_ca)) : IJth(udata,1,jx+1);
-		cBrt = (jx == MR-1) ? IJth(udata,2,MR-2) + TWO*data->dr*(p_rP_an/(p_DLi_an(Tref)*p_csMax_an))*(p_Iapp/(Faraday*p_S_an)) : IJth(udata,2,jx+1);
+		cArt = (jx == MR-1) ? IJth(udata,1,MR-2) - TWO*data->dr*(p_rP_ca/(p_DLi_ca(Tref)*p_csMax_ca))*(p_Iapp/(F*p_S_ca)) : IJth(udata,1,jx+1);
+		cBrt = (jx == MR-1) ? IJth(udata,2,MR-2) + TWO*data->dr*(p_rP_an/(p_DLi_an(Tref)*p_csMax_an))*(p_Iapp/(F*p_S_an)) : IJth(udata,2,jx+1);
 		//DA/SUNSQR(data->dr) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
 		hordA = p_DLi_ca(Tref)/(TWO*jx*SUNSQR(data->dr))*((jx+2)*cArt - TWO*jx*cA + (jx-2)*cAlt)
 				+ p_DLi_ca(Tref)/(TWO*SUNSQR(data->dr))*(cArt - cA)
@@ -516,8 +516,8 @@ static int fSPMT(realtype t, N_Vector u, N_Vector udot, void *user_data)
 	Uca = calc_potCantera(p_nameCathodeSurf, cA, 0.0, 0.0, T);
 	Uan = calc_potCantera(p_nameAnodeSurf, cB, 0.0, 0.0, T);
 	Ueq = Uca - Uan;
-	dUdTca = calc_entropyCantera(p_nameCathodeSurf, cA, T)/Faraday;
-	dUdTan = calc_entropyCantera(p_nameAnodeSurf, cB, T)/Faraday;
+	dUdTca = calc_entropyCantera(p_nameCathodeSurf, cA, T)/F;
+	dUdTan = calc_entropyCantera(p_nameAnodeSurf, cB, T)/F;
 
 	/* Loop over all grid points. */
 
@@ -542,8 +542,8 @@ static int fSPMT(realtype t, N_Vector u, N_Vector udot, void *user_data)
 
 		cAlt = (jx == 0) ? IJth(udata,1,1) : IJth(udata,1,jx-1);
 		cBlt = (jx == 0) ? IJth(udata,2,1) : IJth(udata,2,jx-1);
-		cArt = (jx == MR-1) ? IJth(udata,1,MR-2) - TWO*data->dr*(p_rP_ca/(p_DLi_ca(Tref)*p_csMax_ca))*(p_Iapp/(Faraday*p_S_ca)) : IJth(udata,1,jx+1);
-		cBrt = (jx == MR-1) ? IJth(udata,2,MR-2) + TWO*data->dr*(p_rP_an/(p_DLi_an(Tref)*p_csMax_an))*(p_Iapp/(Faraday*p_S_an)) : IJth(udata,2,jx+1);
+		cArt = (jx == MR-1) ? IJth(udata,1,MR-2) - TWO*data->dr*(p_rP_ca/(p_DLi_ca(Tref)*p_csMax_ca))*(p_Iapp/(F*p_S_ca)) : IJth(udata,1,jx+1);
+		cBrt = (jx == MR-1) ? IJth(udata,2,MR-2) + TWO*data->dr*(p_rP_an/(p_DLi_an(Tref)*p_csMax_an))*(p_Iapp/(F*p_S_an)) : IJth(udata,2,jx+1);
 		//DA/SUNSQR(data->dr) * ( IJth(udata,1,jx+iright) - 2*IJth(udata,1,jx) + IJth(udata,1,jx+ileft))
 		hordA = p_DLi_ca(Tref)/(TWO*jx*SUNSQR(data->dr))*((jx+2)*cArt - TWO*jx*cA + (jx-2)*cAlt)
 				+ p_DLi_ca(Tref)/(TWO*SUNSQR(data->dr))*(cArt - cA)

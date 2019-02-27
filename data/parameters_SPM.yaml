@@ -94,7 +94,8 @@ Cathode: {
    kappaS: 2.1, # [W/(mK)] "Thermal conductivity"
    sigmaS: 100, # [S/m] "Electrical conductivity"
    rP: 2e-6, # [m] "Particle radius"
-   xLiInit: 0.5, # [1] "Initial Lithium molefraction"
+   xLiInit: 25751, # [1] "Initial Lithium molefraction"
+   cLiMax: 51554, # [mol/m3] "Max Lithium concentration"
    aLi: 885000, # [m2/m3] "Particle surface to area volume"
    diffS: 1e-14 # [m2/s] "Lithium diffusion in particle"
 }
@@ -116,7 +117,8 @@ Anode: {
    kappaS: 1.7, # [W/(mK)] "Thermal conductivity"
    sigmaS: 100, # [S/m] "Electrical conductivity"
    rP: 2e-6, # [m] "Particle radius"
-   xLiInit: 0.855, # [1] "Initial Lithium molefraction"
+   xLiInit: 26128, # [1] "Initial Lithium molefraction"
+   cLiMax: 30555, # [mol/m3] "Max Lithium concentration"
    aLi: 723600, # [m2/m3] "Particle surface to area volume"
    diffS: 3.9e-14 # [m2/s] "Lithium diffusion in particle"
 }

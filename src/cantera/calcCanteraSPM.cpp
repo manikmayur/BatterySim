@@ -59,7 +59,7 @@ double calc_ilocCantera(double phiS)
 	// Get the net reaction rate at the cathode-side interface
 	rop = wdot[newSurf.surface->kineticsSpeciesIndex("electron")]*1e3; // [mol/m2/s]
 
-	return rop*Faraday*elodeArea; // [A]
+	return rop*F*elodeArea; // [A]
 }
 
 size_t getPhaseIdxbyName(std::string phaseName, Cantera::Interface *surface)
