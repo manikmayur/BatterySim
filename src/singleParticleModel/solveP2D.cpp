@@ -21,7 +21,7 @@
 
 #define NOUT  100
 #define NX	NXTOTAL             /* NX = number of x mesh points */
-#define NSPECIES 3
+#define NSPECIES 6
 #define NEQ   NSPECIES*NX
 #define ZERO  RCONST(0.0)
 #define ONE   RCONST(1.0)
@@ -38,7 +38,7 @@ typedef struct {
 	sunindextype mm;
 	realtype dr;
 	realtype dx;
-	size_t idxCsAvg, idxCs, idxCe, idxT, idxphiS;
+	size_t idxCsAvg, idxCs, idxCe, idxT, idxphiS, idxphiL;
 } *UserData;
 
 /* Prototypes of functions called by IDA */
@@ -61,10 +61,11 @@ static void InitUserData(UserData data)
 	data->dx = (XMAX-XMIN)/(NX-1); // jx = 0, x = XMIN, jx = 1, x = XMAX, x = XMIN + jx*dx
 	size_t i=0;
 	data->idxCsAvg = ++i;
-	//data->idxCs = ++i;
+	data->idxCs = ++i;
 	data->idxCe = ++i;
 	data->idxT = ++i;
-	//data->idxphiS = 3;
+	data->idxphiS = ++i;
+	data->idxphiL = ++i;
 }
 
 
@@ -84,18 +85,14 @@ static int SetInitialProfile(UserData data, N_Vector uu, N_Vector up,
 	{
 		dom = getDomain(jx);
 		IJth(udata,data->idxCsAvg,jx) = (dom.domType==CA||dom.domType==AN)?dom.xLiInit:ZERO;
-		//IJth(udata,data->idxCs,jx) = (dom.domType==CA||dom.domType==AN)?dom.xLiInit:ZERO;
+		IJth(udata,data->idxCs,jx) = (dom.domType==CA||dom.domType==AN)?dom.xLiInit:ZERO;
 		IJth(udata,data->idxCe,jx) = (jx<ca.idx0||jx>an.idxL)?ZERO:p_cE;
 		IJth(udata,data->idxT,jx) = Tref;
-		//IJth(udata,data->idxphiS,jx) = (dom.domType==CA||dom.domType==AN)?ZERO:ZERO;;
-		IJth(updata,data->idxCsAvg,jx) = ONE;
-		//IJth(updata,data->idxCs,jx) = ZERO;
-		IJth(updata,data->idxCe,jx) = ONE;
-		IJth(updata,data->idxT,jx) = ONE;
-		//IJth(updata,data->idxphiS,jx) = ONE;
+		IJth(udata,data->idxphiS,jx) = ZERO;;
+		IJth(udata,data->idxphiL,jx) = ZERO;;
 	}
 	/* Initialize up vector to 0. */
-	 // N_VConst(ZERO, up);
+	 N_VConst(ZERO, up);
 
 	  /* heatres sets res to negative of ODE RHS values at interior points. */
 	  //heatres(ZERO, uu, up, res, data);
@@ -185,10 +182,10 @@ int runP2D(void)
 
 	/* Print output heading. */
 	files[data->idxCsAvg-1] = fopen("outP2D_concSLiAvg.dat","w");
-	//files[data->idxCs-1] = fopen("outP2D_concSLi.dat","w");
+	files[data->idxCs-1] = fopen("outP2D_concSLi.dat","w");
 	files[data->idxCe-1] = fopen("outP2D_concElyte.dat","w");
 	files[data->idxT-1] = fopen("outP2D_Temperature.dat","w");
-	//files[data->idxphiS-1] = fopen("outP2D_phiS.dat","w");
+	files[data->idxphiS-1] = fopen("outP2D_phiS.dat","w");
 
 	printOutputP2D(mem, t0, uu, files, data);
 
@@ -209,10 +206,10 @@ int runP2D(void)
 	check_retval(&retval, "IDAGetNumNonlinSolvConvFails", 1);
 	printf("\n netf = %ld,   ncfn = %ld \n", netf, ncfn);
 	fclose(files[data->idxCsAvg-1]);
-	//fclose(files[data->idxCs-1]);
+	fclose(files[data->idxCs-1]);
 	fclose(files[data->idxCe-1]);
 	fclose(files[data->idxT-1]);
-	//fclose(files[data->idxphiS-1]);
+	fclose(files[data->idxphiS-1]);
 	IDAFree(&mem);
 	SUNLinSolFree(LS);
 	SUNMatDestroy(A);
@@ -245,6 +242,7 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 	realtype *udata, *updata, *resv;
 	realtype Cs, CsAvg, Ce, Celt, Cert, T, Tlt, Trt;
 	realtype phiS, phiSlt, phiSrt, diff_phiS, sphiS=0.0;
+	realtype phiL, phiLlt, phiLrt, diff_phiL1, diff_phiL2, sphiL=0.0, g;
 	realtype diff_T, diff_Ce, sCe=0.0, sCs=0.0, sCsAvg=0.0;
 	realtype qIrr, qRev, qOut, qTot=0.0, qOhm;
 	realtype Uca, Uan, Ucell, Ueq, dUdTca, dUdTan, iloc=0.0;
@@ -258,10 +256,11 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 	data = (UserData)user_data;
 
 	CsAvg = IJth(udata,data->idxCsAvg,NX-1);
-	//Cs = IJth(udata,data->idxCs,NX-1);
+	Cs = IJth(udata,data->idxCs,NX-1);
 	Ce = IJth(udata,data->idxCe,NX-1);
 	T = IJth(udata,data->idxT,NX-1);
 	//phiS = IJth(udata,data->idxphiS,NX-1);
+	//phiL = IJth(udata,data->idxphiS,NX-1);
 	//Cs = 0.5;
 	/*
 	Uca = calc_potCantera(p_nameCathodeSurf, 0.5, p_Iapp*p_Rel(Tref), p_Iapp, Tref);
@@ -282,11 +281,12 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		dom = getDomain(jx);
 		//
 		CsAvg = IJth(udata,data->idxCsAvg,jx);
-		//Cs = IJth(udata,data->idxCs,jx);
+		Cs = IJth(udata,data->idxCs,jx);
 		Ce = IJth(udata,data->idxCe,jx);
 		T = IJth(udata,data->idxT,jx);
-		//phiS = IJth(udata,data->idxphiS,jx);
-		Cs = 0.5;
+		phiS = IJth(udata,data->idxphiS,jx);
+		phiL = IJth(udata,data->idxphiL,jx);
+		//
 		if (dom.domType==CA||dom.domType==AN)
 			openCircuitPotential(jx, Cs,T, Uca, dUdTca, Uan, dUdTan);
 		//
@@ -300,26 +300,30 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 			+(ONE-p_h*cu.dx/(TWO*cu.kappaS))*IJth(udata,data->idxT,cu.idxL));
 		Trt = (jx == cu.idxL) ? Trt : IJth(udata,data->idxT,jx+1);
 		//
-		//phiSlt = (jx == ca.idx0) ? phiS+dom.dx*p_Iapp/dom.sigmaS : IJth(udata,data->idxphiS,jx-1);
-		//phiSlt = (jx == an.idx0) ? phiS : IJth(udata,data->idxphiS,jx-1);
-		//phiSrt = (jx == ca.idxL) ? phiS : IJth(udata,data->idxphiS,jx+1);
-		//phiSrt = (jx == an.idxL) ? phiS+dom.dx*p_Iapp/dom.sigmaS : IJth(udata,data->idxphiS,jx+1);
+		phiSlt = (jx == ca.idx0) ? phiS+dom.dx*p_Iapp/dom.sigmaS : IJth(udata,data->idxphiS,jx-1);
+		phiSlt = (jx == an.idx0) ? phiS : IJth(udata,data->idxphiS,jx-1);
+		phiSrt = (jx == ca.idxL) ? phiS : IJth(udata,data->idxphiS,jx+1);
+		phiSrt = (jx == an.idxL) ? phiS+dom.dx*p_Iapp/dom.sigmaS : IJth(udata,data->idxphiS,jx+1);
+		//
+		phiLlt = (jx == ca.idx0) ? phiL : IJth(udata,data->idxphiL,jx-1);
+		phiLrt = (jx == an.idxL) ? -phiL : IJth(udata,data->idxphiL,jx+1);
 		//
 		diff_Ce = diffL(jx)/dx2(jx)*(Cert-Ce)-diffL(jx-1)/dx2(jx-1)*(Ce-Celt);
 		diff_T = kappaS(jx)/dx2(jx)*(Trt-T)-kappaS(jx-1)/dx2(jx-1)*(T-Tlt);
 		diff_phiS = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:sigmaS(jx)/dx2(jx)*(phiSrt-phiS)-sigmaS(jx-1)/dx2(jx-1)*(phiS-phiSlt);
-		//diff_phiL1 = (dom.domType==AL||dom.domType==CU)?
-		//		ZERO:sigmaL(jx)/dx2(jx)*(phiLrt-phiL)-sigmaL(jx-1)/dx2(jx-1)*(phiL-phiLlt);
-		//g = TWO*(1-p_tp)*R/F;
-		//diff_phiL2 = (dom.domType==AL||dom.domType==CU)?
-		//		ZERO:sigmaL(jx)*(T+Trt)*g/(TWO*dx2(jx))*log(Cert/Ce)-sigmaL(jx-1)*(T+Tlt)*g/(TWO*dx2(jx-1))*log(Ce/Celt);
+		diff_phiL1 = (dom.domType==AL||dom.domType==CU)?
+				ZERO:sigmaL(jx)/dx2(jx)*(phiLrt-phiL)-sigmaL(jx-1)/dx2(jx-1)*(phiL-phiLlt);
+		g = TWO*(1-p_tp)*R/F;
+		diff_phiL2 = (dom.domType==AL||dom.domType==CU)?
+				ZERO:sigmaL(jx)*(T+Trt)*g/(TWO*dx2(jx))*log(Cert/Ce)-sigmaL(jx-1)*(T+Tlt)*g/(TWO*dx2(jx-1))*log(Ce/Celt);
 		// Set source terms
+		Ueq = Uca - Uan;
 		qIrr = p_Iapp*(Ucell-Ueq);
 		qRev = p_Iapp*T*(dUdTca-dUdTan);
 		qOut = p_h*(T-p_Tamb);
-		//phiEq = 0.0;
-		//iloc = TWO*dom.sigmaL*dom.cLiMax*std::sqrt(Ce*(1-Cs)*Cs)*std::sinh(0.5*R/(F*T)*(phiS-phiL-phiEq));
+
+		//iloc = TWO*dom.sigmaL*dom.cLiMax*std::sqrt(Ce*(1-Cs)*Cs)*std::sinh(0.5*R/(F*T)*(phiS-phiL-Ueq));
 		sCsAvg = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:-3.0*iloc/dom.rP;
 		sCs = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
@@ -328,25 +332,17 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 				ZERO:dom.aLi*(1-p_tp)*iloc;
 		sphiS = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:dom.aLi*F*iloc;
-		//sphiL = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
-		//				ZERO:-dom.aLi*F*iloc;
+		sphiL = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
+				ZERO:-dom.aLi*F*iloc;
 
-		// Update domain variables
-		// Cs
-		IJth(udata,data->idxCsAvg,jx) = CsAvg;
-		//IJth(udata,data->idxCs,jx) = CsAvg+sCs;
-		// Ce
-		IJth(udata,data->idxCe,jx) = Ce;
-		// phiS
-		//IJth(udata,data->idxphiS,jx) = phiS;
-		// phiL
-		//IJth(udata,data->idxphiL,jx) = phiL;
+		//
 
-		IJth(resv,data->idxCsAvg, jx) = IJth(updata,data->idxCsAvg,jx) - sCsAvg*0;
-		//IJth(resv,data->idxCs, jx) = ZERO;//IJth(udata,data->idxCs,jx) - IJth(udata,data->idxCsAvg,jx) - sCs;
-		IJth(resv,data->idxCe,jx) = dom.por*IJth(updata,data->idxCe,jx) - diff_Ce - sCe*0;
+		IJth(resv,data->idxCsAvg, jx) = IJth(updata,data->idxCsAvg,jx) - sCsAvg;
+		IJth(resv,data->idxCs, jx) = IJth(updata,data->idxCs,jx);
+		IJth(resv,data->idxCe,jx) = dom.por*IJth(updata,data->idxCe,jx) - diff_Ce - sCe;
 		IJth(resv,data->idxT,jx) = dom.rho*dom.cP*IJth(updata,data->idxT,jx) - diff_T;
-		//IJth(resv,data->idxphiS, jx) = diff_phiS - sphiS;
+		IJth(resv,data->idxphiS,jx) = IJth(updata,data->idxphiS,jx);
+		IJth(resv,data->idxphiL,jx) = IJth(updata,data->idxphiL,jx);
 	}
 
 	return(0);
