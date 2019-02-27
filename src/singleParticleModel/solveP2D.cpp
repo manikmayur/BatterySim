@@ -52,7 +52,7 @@ static void printOutputP2D(void *mem, realtype t, N_Vector u, std::vector<FILE*>
 static int SetInitialProfile(UserData data, N_Vector uu, N_Vector up,
 		N_Vector id, N_Vector res);
 static int check_retval(void *returnvalue, const char *funcname, int opt);
-static void openCircuitPotential(size_t jx, double cS,double T, double &U_p, double &dudt_p, double &U_n, double &dudt_n);
+static void openCircuitPotential(size_t jx, double cS,double T, double &U, double &dUdT);
 /* Load problem constants in data */
 
 static void InitUserData(UserData data)
@@ -88,8 +88,12 @@ static int SetInitialProfile(UserData data, N_Vector uu, N_Vector up,
 		IJth(udata,data->idxCs,jx) = (dom.domType==CA||dom.domType==AN)?dom.xLiInit:ZERO;
 		IJth(udata,data->idxCe,jx) = (jx<ca.idx0||jx>an.idxL)?ZERO:p_cE;
 		IJth(udata,data->idxT,jx) = Tref;
-		IJth(udata,data->idxphiS,jx) = ZERO;;
-		IJth(udata,data->idxphiL,jx) = ZERO;;
+		IJth(udata,data->idxphiS,jx) = 1e-8;
+		IJth(udata,data->idxphiL,jx) = 1e-8;
+		//
+		IJth(iddata,data->idxCs,jx) = ZERO;
+		IJth(iddata,data->idxphiS,jx) = ZERO;
+		IJth(iddata,data->idxphiL,jx) = ZERO;
 	}
 	/* Initialize up vector to 0. */
 	 N_VConst(ZERO, up);
@@ -247,11 +251,11 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 	realtype phiL, phiLlt, phiLrt, diff_phiL1, diff_phiL2, g;
 	realtype diff_T, diff_Ce, sCe, sCs, sCsAvg, sphiS, sphiL;
 	realtype qIrr, qRev, qOut, qTot, qOhm;
-	realtype Uca, Uan, Ucell, Ueq, dUdTca, dUdTan, iloc=0.0;
+	realtype Ucell, Ueq, dUdT, iloc=0.0;
 	domain dom;
 	UserData data;
 
-	Uca=Uan=Ucell=Ueq=dUdTca=dUdTan=ZERO;
+	Ucell=Ueq=dUdT=ZERO;
 	qIrr=qRev=qOut=qTot=qOhm=ZERO;
 	sCe=sCs=sCsAvg=sphiS=sphiL=ZERO;
 
@@ -294,7 +298,7 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		phiL = IJth(udata,data->idxphiL,jx);
 		//
 		if (dom.domType==CA||dom.domType==AN)
-			openCircuitPotential(jx, Cs,T, Uca, dUdTca, Uan, dUdTan);
+			openCircuitPotential(jx, Cs,T, Ueq, dUdT);
 		//
 		Celt = (jx == ca.idx0) ? Ce : IJth(udata,data->idxCe,jx-1);
 		Cert = (jx == an.idxL) ? Ce : IJth(udata,data->idxCe,jx+1);
@@ -324,12 +328,12 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		diff_phiL2 = (dom.domType==AL||dom.domType==CU)?
 				ZERO:sigmaL(jx)*(T+Trt)*g/(TWO*dx2(jx))*log(Cert/Ce)-sigmaL(jx-1)*(T+Tlt)*g/(TWO*dx2(jx-1))*log(Ce/Celt);
 		// Set source terms
-		Ueq = Uca - Uan;
 		qIrr = p_Iapp*(Ucell-Ueq);
-		qRev = p_Iapp*T*(dUdTca-dUdTan);
+		//qRev = p_Iapp*T*(dUdTca-dUdTan);
 		qOut = p_h*(T-p_Tamb);
 
 		//iloc = TWO*dom.sigmaL*dom.cLiMax*std::sqrt(Ce*(1-Cs)*Cs)*std::sinh(0.5*R/(F*T)*(phiS-phiL-Ueq));
+		iloc = ZERO;
 		sCsAvg = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:-3.0*iloc/dom.rP;
 		sCs = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
@@ -339,16 +343,16 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		sphiS = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:dom.aLi*F*iloc;
 		sphiL = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
-				ZERO:-dom.aLi*F*iloc;
+				ZERO:dom.aLi*F*iloc;
 
 		//
 
 		IJth(resv,data->idxCsAvg, jx) = IJth(updata,data->idxCsAvg,jx) - sCsAvg;
-		IJth(resv,data->idxCs, jx) = IJth(updata,data->idxCs,jx);
+		IJth(resv,data->idxCs,jx) = Cs-CsAvg-sCs;
 		IJth(resv,data->idxCe,jx) = dom.por*IJth(updata,data->idxCe,jx) - diff_Ce - sCe;
 		IJth(resv,data->idxT,jx) = dom.rho*dom.cP*IJth(updata,data->idxT,jx) - diff_T;
-		IJth(resv,data->idxphiS,jx) = IJth(updata,data->idxphiS,jx);
-		IJth(resv,data->idxphiL,jx) = IJth(updata,data->idxphiL,jx);
+		IJth(resv,data->idxphiS,jx) = IJth(updata,data->idxphiS,jx); //- diff_phiS + sphiS;
+		IJth(resv,data->idxphiL,jx) = IJth(updata,data->idxphiL,jx); //- diff_phiL1 + diff_phiL2 - sphiL;
 	}
 
 	return(0);
@@ -459,34 +463,34 @@ static int check_retval(void *returnvalue, const char *funcname, int opt)
 	return(0);
 }
 
-static void openCircuitPotential(size_t jx, double cS,double T, double &U_p, double &dudt_p, double &U_n, double &dudt_n)
+static void openCircuitPotential(size_t jx, double cS,double T, double &U, double &dUdT)
 {
 	// Calculate the open circuit voltage of the battery in the positive
 	// electrode
 	domain dom = getDomain(jx);
-	double theta_p  = cS/dom.cLiMax;
+	double theta  = cS/dom.cLiMax;
 
-	// Compute the variation of OCV with respect to temperature variations [V/K]
-	dudt_p = -0.001*(0.199521039-0.928373822*theta_p + 1.364550689000003*std::pow(theta_p,2)-0.6115448939999998*std::pow(theta_p,3));
-	dudt_p = dudt_p/(1-5.661479886999997*theta_p +11.47636191*std::pow(theta_p,2)-9.82431213599998*std::pow(theta_p,3)+3.048755063*std::pow(theta_p,4));
+	if (dom.domType == CA)
+	{
+		// Compute the variation of OCV with respect to temperature variations [V/K]
+		dUdT = -0.001*(0.199521039-0.928373822*theta + 1.364550689000003*std::pow(theta,2)-0.6115448939999998*std::pow(theta,3));
+		dUdT = dUdT/(1-5.661479886999997*theta +11.47636191*std::pow(theta,2)-9.82431213599998*std::pow(theta,3)+3.048755063*std::pow(theta,4));
 
-	// Define the OCV for the positive electrode
-	U_p = -4.656+88.669*std::pow(theta_p,2) - 401.119*std::pow(theta_p,4) + 342.909*std::pow(theta_p,6) - 462.471*std::pow(theta_p,8) + 433.434*std::pow(theta_p,10);
-	U_p = U_p/(-1+18.933*std::pow(theta_p,2)-79.532*std::pow(theta_p,4)+37.311*std::pow(theta_p,6)-73.083*std::pow(theta_p,8)+95.96*std::pow(theta_p,10));
-	U_p = U_p + (T-Tref)*dudt_p;
+		// Define the OCV for the positive electrode
+		U = -4.656+88.669*std::pow(theta,2) - 401.119*std::pow(theta,4) + 342.909*std::pow(theta,6) - 462.471*std::pow(theta,8) + 433.434*std::pow(theta,10);
+		U = U/(-1+18.933*std::pow(theta,2)-79.532*std::pow(theta,4)+37.311*std::pow(theta,6)-73.083*std::pow(theta,8)+95.96*std::pow(theta,10));
+		U = U + (T-Tref)*dUdT;
+	}
+	else if (dom.domType == AN)
+	{
+		// Compute the variation of OCV with respect to temperature variations [V/K]
+		dUdT = 0.001*(0.005269056 +3.299265709*theta-91.79325798*std::pow(theta,2)+1004.911008*std::pow(theta,3)-5812.278127*std::pow(theta,4)
+		+ 19329.7549*std::pow(theta,5) - 37147.8947*std::pow(theta,6) + 38379.18127*std::pow(theta,7)-16515.05308*std::pow(theta,8));
+		dUdT = dUdT/(1-48.09287227*theta+1017.234804*std::pow(theta,2)-10481.80419*std::pow(theta,3)+59431.3*std::pow(theta,4)-195881.6488*std::pow(theta,5)
+		+ 374577.3152*std::pow(theta,6) - 385821.1607*std::pow(theta,7) + 165705.8597*std::pow(theta,8));
 
-
-	// Calculate the open circuit voltage of the battery in the negative
-	// electrode
-	double theta_n = cS/dom.cLiMax;
-
-	// Compute the variation of OCV with respect to temperature variations [V/K]
-	dudt_n = 0.001*(0.005269056 +3.299265709*theta_n-91.79325798*std::pow(theta_n,2)+1004.911008*std::pow(theta_n,3)-5812.278127*std::pow(theta_n,4)
-		+ 19329.7549*std::pow(theta_n,5) - 37147.8947*std::pow(theta_n,6) + 38379.18127*std::pow(theta_n,7)-16515.05308*std::pow(theta_n,8));
-	dudt_n = dudt_n/(1-48.09287227*theta_n+1017.234804*std::pow(theta_n,2)-10481.80419*std::pow(theta_n,3)+59431.3*std::pow(theta_n,4)-195881.6488*std::pow(theta_n,5)
-	+ 374577.3152*std::pow(theta_n,6) - 385821.1607*std::pow(theta_n,7) + 165705.8597*std::pow(theta_n,8));
-
-	// Define the OCV for the negative electrode
-	U_n   = 0.7222 + 0.1387*theta_n + 0.029*std::pow(theta_n,0.5) - 0.0172/theta_n + 0.0019/std::pow(theta_n,1.5) + 0.2808*std::exp(0.9-15*theta_n)-0.7984*std::exp(0.4465*theta_n - 0.4108);
-	U_n = U_n + (T-Tref)*dudt_n;
+		// Define the OCV for the negative electrode
+		U   = 0.7222 + 0.1387*theta + 0.029*std::pow(theta,0.5) - 0.0172/theta + 0.0019/std::pow(theta,1.5) + 0.2808*std::exp(0.9-15*theta)-0.7984*std::exp(0.4465*theta - 0.4108);
+		U = U + (T-Tref)*dUdT;
+	}
 }
