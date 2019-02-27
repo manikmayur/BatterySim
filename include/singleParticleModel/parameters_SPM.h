@@ -295,8 +295,9 @@ static double kappaS(size_t ix)
 }
 static double sigmaS(size_t ix)
 {
-	if (ix < al.idx0) return al.sigmaS;
+	if (ix <= al.idx0) return al.sigmaS;
 	if (ix >= cu.idxL) return cu.sigmaS;
+	if (ix >= el.idx0 && ix <= el.idxL) return el.sigmaS;
 	double beta = (getDomain(ix)).dx/((getDomain(ix)).dx+(getDomain(ix+1)).dx);
 	return (getDomain(ix)).sigmaS*(getDomain(ix+1)).sigmaS/
 			(beta*(getDomain(ix+1)).sigmaS+(1-beta)*(getDomain(ix)).sigmaS);

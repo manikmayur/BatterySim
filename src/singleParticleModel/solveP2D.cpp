@@ -297,8 +297,7 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		phiS = IJth(udata,data->idxphiS,jx);
 		phiL = IJth(udata,data->idxphiL,jx);
 		//
-		if (dom.domType==CA||dom.domType==AN)
-			openCircuitPotential(jx, Cs,T, Ueq, dUdT);
+		openCircuitPotential(jx, Cs,T, Ueq, dUdT);
 		//
 		Celt = (jx == ca.idx0) ? Ce : IJth(udata,data->idxCe,jx-1);
 		Cert = (jx == an.idxL) ? Ce : IJth(udata,data->idxCe,jx+1);
@@ -310,31 +309,34 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 			+(ONE-p_h*cu.dx/(TWO*cu.kappaS))*IJth(udata,data->idxT,cu.idxL));
 		Trt = (jx == cu.idxL) ? Trt : IJth(udata,data->idxT,jx+1);
 		//
-		phiSlt = (jx == ca.idx0) ? phiS+dom.dx*p_Iapp/dom.sigmaS : IJth(udata,data->idxphiS,jx-1);
-		phiSlt = (jx == an.idx0) ? phiS : IJth(udata,data->idxphiS,jx-1);
-		phiSrt = (jx == ca.idxL) ? phiS : IJth(udata,data->idxphiS,jx+1);
-		phiSrt = (jx == an.idxL) ? phiS+dom.dx*p_Iapp/dom.sigmaS : IJth(udata,data->idxphiS,jx+1);
+		if (jx == ca.idx0)
+			phiSlt = phiS+dom.dx*p_Iapp/dom.sigmaS;
+		else if (jx == an.idx0)
+			phiSlt = phiS;
+		else phiSlt = IJth(udata,data->idxphiS,jx-1);
+		if (jx == ca.idxL)
+			phiSrt = phiS;
+		else if (jx == an.idxL)
+			phiSrt = phiS+dom.dx*p_Iapp/dom.sigmaS;
+		else phiSrt = IJth(udata,data->idxphiS,jx+1);
 		//
 		phiLlt = (jx == ca.idx0) ? phiL : IJth(udata,data->idxphiL,jx-1);
 		phiLrt = (jx == an.idxL) ? -phiL : IJth(udata,data->idxphiL,jx+1);
 		//
 		diff_Ce = diffL(jx)/dx2(jx)*(Cert-Ce)-diffL(jx-1)/dx2(jx-1)*(Ce-Celt);
 		diff_T = kappaS(jx)/dx2(jx)*(Trt-T)-kappaS(jx-1)/dx2(jx-1)*(T-Tlt);
-		diff_phiS = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
-				ZERO:sigmaS(jx)/dx2(jx)*(phiSrt-phiS)-sigmaS(jx-1)/dx2(jx-1)*(phiS-phiSlt);
-		diff_phiL1 = (dom.domType==AL||dom.domType==CU)?
-				ZERO:sigmaL(jx)/dx2(jx)*(phiLrt-phiL)-sigmaL(jx-1)/dx2(jx-1)*(phiL-phiLlt);
+		diff_phiS = sigmaS(jx)/dx2(jx)*(phiSrt-phiS)-sigmaS(jx-1)/dx2(jx-1)*(phiS-phiSlt);
+		diff_phiL1 = sigmaL(jx)/dx2(jx)*(phiLrt-phiL)-sigmaL(jx-1)/dx2(jx-1)*(phiL-phiLlt);
 		g = TWO*(1-p_tp)*R/F;
-		diff_phiL2 = (dom.domType==AL||dom.domType==CU)?
-				ZERO:sigmaL(jx)*(T+Trt)*g/(TWO*dx2(jx))*log(Cert/Ce)-sigmaL(jx-1)*(T+Tlt)*g/(TWO*dx2(jx-1))*log(Ce/Celt);
+		diff_phiL2 = sigmaL(jx)*(T+Trt)*g/(TWO*dx2(jx))*log(Cert/Ce)-sigmaL(jx-1)*(T+Tlt)*g/(TWO*dx2(jx-1))*log(Ce/Celt);
 		// Set source terms
 		qIrr = p_Iapp*(Ucell-Ueq);
 		//qRev = p_Iapp*T*(dUdTca-dUdTan);
 		qOut = p_h*(T-p_Tamb);
-
-		iloc = TWO*dom.sigmaL*dom.cLiMax*std::sqrt(Ce*(1-Cs)*Cs)*std::sinh(0.5*R/(F*T)*(phiS-phiL-Ueq));
+		//std::cout<<dom.domType<<" "<<sigmaS(jx)<<" "<<diff_phiS<<"\n";
+		iloc = TWO*dom.sigmaL*std::sqrt(Ce*(dom.cLiMax-Cs)*Cs)*std::sinh(0.5*R/(F*T)*(phiS-phiL-Ueq));
 		iloc = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
-				ZERO:ZERO;
+				ZERO:iloc;
 		sCsAvg = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:-3.0*iloc/dom.rP;
 		sCs = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
@@ -349,8 +351,8 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		IJth(resv,data->idxCs,jx) = Cs-CsAvg-sCs;
 		IJth(resv,data->idxCe,jx) = dom.por*IJth(updata,data->idxCe,jx) - diff_Ce - sCe;
 		IJth(resv,data->idxT,jx) = dom.rho*dom.cP*IJth(updata,data->idxT,jx) - diff_T;
-		IJth(resv,data->idxphiS,jx) = IJth(updata,data->idxphiS,jx); //- diff_phiS + sphiS;
-		IJth(resv,data->idxphiL,jx) = IJth(updata,data->idxphiL,jx); //- diff_phiL1 + diff_phiL2 - sphiL;
+		IJth(resv,data->idxphiS,jx) = IJth(updata,data->idxphiS,jx) + diff_phiS - sphiS;
+		IJth(resv,data->idxphiL,jx) = IJth(updata,data->idxphiL,jx);// + diff_phiL1 - diff_phiL2 - sphiL;
 	}
 
 	return(0);
@@ -488,7 +490,12 @@ static void openCircuitPotential(size_t jx, double cS,double T, double &U, doubl
 		+ 374577.3152*std::pow(theta,6) - 385821.1607*std::pow(theta,7) + 165705.8597*std::pow(theta,8));
 
 		// Define the OCV for the negative electrode
-		U   = 0.7222 + 0.1387*theta + 0.029*std::pow(theta,0.5) - 0.0172/theta + 0.0019/std::pow(theta,1.5) + 0.2808*std::exp(0.9-15*theta)-0.7984*std::exp(0.4465*theta - 0.4108);
+		U = 0.7222 + 0.1387*theta + 0.029*std::pow(theta,0.5) - 0.0172/theta + 0.0019/std::pow(theta,1.5) + 0.2808*std::exp(0.9-15*theta)-0.7984*std::exp(0.4465*theta - 0.4108);
 		U = U + (T-Tref)*dUdT;
+	}
+	else
+	{
+		U = ZERO;
+		dUdT = ZERO;
 	}
 }
