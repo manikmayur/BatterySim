@@ -51,7 +51,7 @@ double const p_I1C = params["I1C"].as<double>(); // [A] "1C discharge current"
 double const p_cR = params["cR"].as<double>(); // [1] "C-rate"
 double const p_Iapp = p_cR*p_I1C; // [A] "Applied current"
 double const p_tInit = params["tStart"].as<double>();
-double const p_tTotal = 3600/abs(p_cR); // [s] "Total runtime"
+double const p_tTotal = params["tTotal"].as<double>(); // [s] "Total runtime"
 double const p_Tamb = params["T_amb"].as<double>(); // [K] "Ambient temperature"
 
 double const p_h = 1; //[W/m2K]
@@ -119,6 +119,12 @@ double const p_theta2 = (-6.824e-6*abs(p_Iapp) + 1.372e-5)*pow((p_Tamb - 273.15)
    + (7.179e-2*abs(p_Iapp) - 1.456e-1);
 
 inline double p_Rel(double T) {return p_theta1 + p_theta2*(T - p_Tamb);}
+
+inline double sigmaEL(double ce, double T)
+{
+	return 1e-4*ce*std::pow(-10.5+0.668*1e-3*ce+0.494*1e-6*std::pow(ce,2)
+			+(0.074-1.78*1e-5*ce-8.86*1e-10*std::pow(ce,2))*T+(-6.96*1e-5+2.8*1e-8*ce)*std::pow(T,2),2);
+}
 
 // Active material properties
 double const p_DLi = params["DLi"].as<double>(); // 6e-14 #[m^2/s] Diffusion coefficient of Li in active material (Laresgoiti 2015 JPS)
@@ -285,29 +291,49 @@ static domain getDomain(size_t jx)
 	else std::cout<<"getDomain: Unknown grid index "<<jx<<std::endl;
 	return al;
 }
+static double dx(size_t ix)
+{
+	return (getDomain(ix)).dx;
+}
 static double kappaS(size_t ix)
 {
-	if (ix < al.idx0) return al.kappaS;
-	if (ix >= cu.idxL) return cu.kappaS;
-	double beta = (getDomain(ix)).dx/((getDomain(ix)).dx+(getDomain(ix+1)).dx);
-	return (getDomain(ix)).kappaS*(getDomain(ix+1)).kappaS/
-			(beta*(getDomain(ix+1)).kappaS+(1-beta)*(getDomain(ix)).kappaS);
+	return (getDomain(ix)).kappaS;
 }
 static double sigmaS(size_t ix)
 {
-	if (ix <= al.idx0) return al.sigmaS;
-	if (ix >= cu.idxL) return cu.sigmaS;
+	double beta;
+	if (ix < al.idxL) return al.sigmaS;
+	if (ix > cu.idx0) return cu.sigmaS;
+	if (ix > ca.idx0 && ix <= ca.idxL) return ca.sigmaS;
 	if (ix >= el.idx0 && ix <= el.idxL) return el.sigmaS;
-	double beta = (getDomain(ix)).dx/((getDomain(ix)).dx+(getDomain(ix+1)).dx);
+	if (ix >= an.idx0 && ix < an.idxL) return an.sigmaS;
+	if (ix == ca.idx0||ix == cu.idx0)
+	{
+		beta = (getDomain(ix)).dx/((getDomain(ix)).dx+(getDomain(ix-1)).dx);
+		return (getDomain(ix)).sigmaS*(getDomain(ix-1)).sigmaS/
+					(beta*(getDomain(ix)).sigmaS+(1-beta)*(getDomain(ix-1)).sigmaS);
+	}
+	beta = (getDomain(ix)).dx/((getDomain(ix)).dx+(getDomain(ix+1)).dx);
 	return (getDomain(ix)).sigmaS*(getDomain(ix+1)).sigmaS/
 			(beta*(getDomain(ix+1)).sigmaS+(1-beta)*(getDomain(ix)).sigmaS);
 }
-static double sigmaL(size_t ix)
+static double sigmaL(size_t ix, double ce[3], double T[3])
 {
+	double beta;
+	double sigmaLlt = sigmaEL(ce[0],T[0]);
+	double sigmaL = sigmaEL(ce[1],T[1]);
+	double sigmaLrt = sigmaEL(ce[2],T[2]);
 	if (ix < ca.idx0 || ix > an.idxL) return 0.0;
-	double beta = (getDomain(ix)).dx/((getDomain(ix)).dx+(getDomain(ix+1)).dx);
-	return (getDomain(ix)).sigmaL*(getDomain(ix+1)).sigmaS/
-			(beta*(getDomain(ix+1)).sigmaL+(1-beta)*(getDomain(ix)).sigmaL);
+	if (ix >= ca.idx0 && ix < ca.idxL) return sigmaL;
+	if (ix > el.idx0 && ix < el.idxL) return sigmaL;
+	if (ix > an.idx0 && ix < an.idxL) return sigmaL;
+	if (ix == ca.idxL||ix == el.idxL)
+	{
+		beta = (getDomain(ix)).dx/((getDomain(ix)).dx+(getDomain(ix+1)).dx);
+		return (sigmaL*sigmaLrt/(beta*sigmaLrt+(1-beta)*sigmaL));
+	}
+	beta = (getDomain(ix)).dx/((getDomain(ix)).dx+(getDomain(ix-1)).dx);
+	return (sigmaL*sigmaLlt/(beta*sigmaL+(1-beta)*sigmaLlt));
 }
 static double dx2(size_t ix)
 {
@@ -317,6 +343,6 @@ static double dx2(size_t ix)
 }
 static double diffL(size_t ix)
 {
-	return p_DLi;
+	return (getDomain(ix)).diffL;
 }
 #endif /* PARAMETERS_SPM_H_ */

@@ -2,7 +2,8 @@
 # Model parameters
 model: 0 # [0 = SPM, 1 = SPMT, 2 = SPMe, 3 = SPMeT]
 tStart: 0
-tSteps: 200
+tSteps: 100
+tTotal: 100
 rSteps: 100
 aTol: 1e-6
 rTol: 1e-6
@@ -23,7 +24,7 @@ cathodeSurfaceName: "edge_cathode_electrolyte"
 anodeSurfaceName: "edge_anode_electrolyte"
 
 # Load parameters
-I1C: 1.656 # [A] "1C discharge current"
+I1C: 0 #1.656 # [A] "1C discharge current"
 cR: -1 # [1] "C-rate"
 T_amb: 278.15 # [K] "Ambient temperature"
 
