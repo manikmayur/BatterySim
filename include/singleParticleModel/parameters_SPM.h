@@ -120,7 +120,7 @@ double const p_theta2 = (-6.824e-6*abs(p_Iapp) + 1.372e-5)*pow((p_Tamb - 273.15)
 
 inline double p_Rel(double T) {return p_theta1 + p_theta2*(T - p_Tamb);}
 
-inline double sigmaEL(double ce, double T)
+inline double sigmaL(double ce, double T)
 {
 	return 1e-4*ce*std::pow(-10.5+0.668*1e-3*ce+0.494*1e-6*std::pow(ce,2)
 			+(0.074-1.78*1e-5*ce-8.86*1e-10*std::pow(ce,2))*T+(-6.96*1e-5+2.8*1e-8*ce)*std::pow(T,2),2);
@@ -302,30 +302,6 @@ static double kappaS(size_t ix)
 static double sigmaS(size_t ix)
 {
 	return (getDomain(ix)).sigmaS;
-}
-static double sigmaL(size_t ix, double ce[3], double T[3])
-{
-	double beta;
-	double sigmaLlt = sigmaEL(ce[0],T[0]);
-	double sigmaL = sigmaEL(ce[1],T[1]);
-	double sigmaLrt = sigmaEL(ce[2],T[2]);
-	if (ix < ca.idx0 || ix > an.idxL) return 0.0;
-	if (ix >= ca.idx0 && ix < ca.idxL) return sigmaL;
-	if (ix > el.idx0 && ix < el.idxL) return sigmaL;
-	if (ix > an.idx0 && ix < an.idxL) return sigmaL;
-	if (ix == ca.idxL||ix == el.idxL)
-	{
-		beta = (getDomain(ix)).dx/((getDomain(ix)).dx+(getDomain(ix+1)).dx);
-		return (sigmaL*sigmaLrt/(beta*sigmaLrt+(1-beta)*sigmaL));
-	}
-	beta = (getDomain(ix)).dx/((getDomain(ix)).dx+(getDomain(ix-1)).dx);
-	return (sigmaL*sigmaLlt/(beta*sigmaL+(1-beta)*sigmaLlt));
-}
-static double dx2(size_t ix)
-{
-	if (ix < al.idx0) return al.dx*al.dx;
-	if (ix >= cu.idxL) return cu.dx*cu.dx;
-	return (getDomain(ix)).dx*(getDomain(ix+1)).dx;
 }
 static double diffL(size_t ix)
 {

@@ -352,11 +352,16 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 				sigmaS(jx)*sigmaS(jx+1)/(betar*sigmaS(jx+1)+(1-betar)*sigmaS(jx)):sigmaS(jx);
 		diff_phiS = diffrt/dx2rt*(phiSrt-phiS)-difflt/dx2lt*(phiS-phiSlt);
 		//
-		diff_phiL1 = sigmaL(jx,CeA,TA)/dx2(jx)*(phiLrt-phiL)-sigmaL(jx-1,CeA,TA)/dx2(jx-1)*(phiL-phiLlt);
+		difflt = (jx == dom.idx0 && jx > ca.idx0)?
+				sigmaL(Ce,T)*sigmaL(Celt,Tlt)/(betal*sigmaL(Ce,T)+(1-betal)*sigmaL(Celt,Tlt)):sigmaL(Ce,T);
+		diffrt = (jx == dom.idxL && jx < an.idxL)?
+				sigmaL(Ce,T)*sigmaL(Cert,Trt)/(betar*sigmaL(Cert,Trt)+(1-betar)*sigmaL(Ce,T)):sigmaL(Ce,T);
+		diff_phiL1 = diffrt/dx2rt*(phiLrt-phiL)-difflt/dx2lt*(phiL-phiLlt);
 		g = TWO*(1-p_tp)*R/F;
-		diff_phiL2 = sigmaL(jx,CeA,TA)*(T+Trt)*g/(TWO*dx2(jx))*log(Cert/Ce)-sigmaL(jx-1,CeA,TA)*(T+Tlt)*g/(TWO*dx2(jx-1))*log(Ce/Celt);
+		diff_phiL2 = (jx >= ca.idx0 && jx <= an.idxL)?
+				diffrt/dx2rt*g*(T+Trt)/TWO*log(Cert/Ce)-difflt/dx2lt*g*(T+Tlt)/TWO*log(Ce/Celt):ZERO;
 		// Set source terms
-		qIrr = p_Iapp*(Ucell-Ueq);
+		qIrr = p_Iapp*(phiS-phiL-Ueq);
 		qRev = p_Iapp*T*dUdT;
 		qOut = p_h*(T-p_Tamb);
 		iloc = TWO*dom.sigmaL*std::sqrt(Ce*(dom.cLiMax-Cs)*Cs)*std::sinh(0.5*R/(F*T)*(phiS-phiL-Ueq));
@@ -369,14 +374,14 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		sCe = dom.aLi*(1-p_tp)*iloc;
 		sphiS = dom.aLi*F*iloc;
 		sphiL = -dom.aLi*F*iloc;
-		//std::cout<<dom.domType<<" "<<difflt<<" "<<diffrt<<" "<<sigmaS(jx)<<"\n";
+		//std::cout<<dom.domType<<" "<<diff_phiL1<<" "<<diff_phiL2<<" "<<"\n";
 		//
 		IJth(resv,data->idxCsAvg, jx) = IJth(updata,data->idxCsAvg,jx) - sCsAvg;
 		IJth(resv,data->idxCs,jx) = Cs-CsAvg-sCs;
 		IJth(resv,data->idxCe,jx) = dom.por*IJth(updata,data->idxCe,jx) - diff_Ce - sCe;
 		IJth(resv,data->idxT,jx) = dom.rho*dom.cP*IJth(updata,data->idxT,jx) - diff_T;
 		IJth(resv,data->idxphiS,jx) = IJth(updata,data->idxphiS,jx) + diff_phiS - sphiS;
-		IJth(resv,data->idxphiL,jx) = IJth(updata,data->idxphiL,jx) + diff_phiL1; //- diff_phiL2 - sphiL;
+		IJth(resv,data->idxphiL,jx) = IJth(updata,data->idxphiL,jx) + diff_phiL1- diff_phiL2 - sphiL;
 	}
 
 	return(0);

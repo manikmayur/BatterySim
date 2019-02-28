@@ -24,9 +24,9 @@ cathodeSurfaceName: "edge_cathode_electrolyte"
 anodeSurfaceName: "edge_anode_electrolyte"
 
 # Load parameters
-I1C: 0 #1.656 # [A] "1C discharge current"
+I1C: 0.0001 # [A] "1C discharge current"
 cR: -1 # [1] "C-rate"
-T_amb: 278.15 # [K] "Ambient temperature"
+T_amb: 298.15 # [K] "Ambient temperature"
 
 # Cell parameters
 L_sep: 25e-6 # [m] "Separator thickness"
