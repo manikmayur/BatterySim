@@ -346,7 +346,12 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 				diffL(jx)*diffL(jx+1)/(betar*diffL(jx+1)+(1-betar)*diffL(jx)):diffL(jx);
 		diff_Ce = diffrt/dx2rt*(Cert-Ce)-difflt/dx2lt*(Ce-Celt);
 		//
-		diff_phiS = sigmaS(jx)/dx2(jx)*(phiSrt-phiS)-sigmaS(jx-1)/dx2(jx-1)*(phiS-phiSlt);
+		difflt = (jx == ca.idx0 || jx == cu.idx0)?
+				sigmaS(jx)*sigmaS(jx-1)/(betal*sigmaS(jx)+(1-betal)*sigmaS(jx-1)):sigmaS(jx);
+		diffrt = (jx == al.idxL || jx == an.idxL)?
+				sigmaS(jx)*sigmaS(jx+1)/(betar*sigmaS(jx+1)+(1-betar)*sigmaS(jx)):sigmaS(jx);
+		diff_phiS = diffrt/dx2rt*(phiSrt-phiS)-difflt/dx2lt*(phiS-phiSlt);
+		//
 		diff_phiL1 = sigmaL(jx,CeA,TA)/dx2(jx)*(phiLrt-phiL)-sigmaL(jx-1,CeA,TA)/dx2(jx-1)*(phiL-phiLlt);
 		g = TWO*(1-p_tp)*R/F;
 		diff_phiL2 = sigmaL(jx,CeA,TA)*(T+Trt)*g/(TWO*dx2(jx))*log(Cert/Ce)-sigmaL(jx-1,CeA,TA)*(T+Tlt)*g/(TWO*dx2(jx-1))*log(Ce/Celt);
@@ -364,7 +369,7 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		sCe = dom.aLi*(1-p_tp)*iloc;
 		sphiS = dom.aLi*F*iloc;
 		sphiL = -dom.aLi*F*iloc;
-		//std::cout<<dom.domType<<" "<<difflt<<" "<<diffrt<<" "<<diffL(jx)<<"\n";
+		//std::cout<<dom.domType<<" "<<difflt<<" "<<diffrt<<" "<<sigmaS(jx)<<"\n";
 		//
 		IJth(resv,data->idxCsAvg, jx) = IJth(updata,data->idxCsAvg,jx) - sCsAvg;
 		IJth(resv,data->idxCs,jx) = Cs-CsAvg-sCs;

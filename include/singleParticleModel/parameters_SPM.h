@@ -301,21 +301,7 @@ static double kappaS(size_t ix)
 }
 static double sigmaS(size_t ix)
 {
-	double beta;
-	if (ix < al.idxL) return al.sigmaS;
-	if (ix > cu.idx0) return cu.sigmaS;
-	if (ix > ca.idx0 && ix <= ca.idxL) return ca.sigmaS;
-	if (ix >= el.idx0 && ix <= el.idxL) return el.sigmaS;
-	if (ix >= an.idx0 && ix < an.idxL) return an.sigmaS;
-	if (ix == ca.idx0||ix == cu.idx0)
-	{
-		beta = (getDomain(ix)).dx/((getDomain(ix)).dx+(getDomain(ix-1)).dx);
-		return (getDomain(ix)).sigmaS*(getDomain(ix-1)).sigmaS/
-					(beta*(getDomain(ix)).sigmaS+(1-beta)*(getDomain(ix-1)).sigmaS);
-	}
-	beta = (getDomain(ix)).dx/((getDomain(ix)).dx+(getDomain(ix+1)).dx);
-	return (getDomain(ix)).sigmaS*(getDomain(ix+1)).sigmaS/
-			(beta*(getDomain(ix+1)).sigmaS+(1-beta)*(getDomain(ix)).sigmaS);
+	return (getDomain(ix)).sigmaS;
 }
 static double sigmaL(size_t ix, double ce[3], double T[3])
 {
