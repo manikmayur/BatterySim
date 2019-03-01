@@ -121,12 +121,6 @@ double const p_theta2 = (-6.824e-6*abs(p_Iapp) + 1.372e-5)*pow((p_Tamb - 273.15)
 
 inline double p_Rel(double T) {return p_theta1 + p_theta2*(T - p_Tamb);}
 
-inline double sigmaL(double por, double ce, double T)
-{
-	return std::pow(por,p_brugg)*1e-4*ce*std::pow(-10.5+0.668*1e-3*ce+0.494*1e-6*std::pow(ce,2)
-			+(0.074-1.78*1e-5*ce-8.86*1e-10*std::pow(ce,2))*T+(-6.96*1e-5+2.8*1e-8*ce)*std::pow(T,2),2);
-}
-
 // Active material properties
 double const p_DLi = params["DLi"].as<double>(); // 6e-14 #[m^2/s] Diffusion coefficient of Li in active material (Laresgoiti 2015 JPS)
 double const p_cPmax = params["cPmax"].as<double>();// %[mol/m^3] Maximum concentration of Li in active material (Laresgoiti 2015 JPS)
@@ -326,21 +320,31 @@ inline double dx(size_t ix)
 {
 	return getDomain(ix).dx;
 }
+// Thermal conductivity solid
 inline double kappaS(size_t ix)
 {
 	return getDomain(ix).kappaS;
 }
+// Electric conductivity solid
 inline double sigmaS(size_t ix)
 {
 	return getDomain(ix).sigmaS;
 }
-inline double diffL(double por,double Ce, double T)
+// Electric conductivity liquid
+inline double sigmaL(double por, double ce, double T)
 {
-	return std::pow(por,p_brugg)*1e-4*std::pow(10,((-4.43-54/(T-229-Ce*5e-3)-Ce*0.22e-3)));
+	return std::pow(por,p_brugg)*1e-4*ce*std::pow(-10.5+0.668*1e-3*ce+0.494*1e-6*std::pow(ce,2)
+			+(0.074-1.78*1e-5*ce-8.86*1e-10*std::pow(ce,2))*T+(-6.96*1e-5+2.8*1e-8*ce)*std::pow(T,2),2);
 }
+// Diffusivity Li in solid
 inline double diffS(size_t ix, double T)
 {
 	return getDomain(ix).diffS*std::exp(-getDomain(ix).actED/R*(1/T-1/Tref));
+}
+// Diffusivity Li in liquid
+inline double diffL(double por,double Ce, double T)
+{
+	return std::pow(por,p_brugg)*1e-4*std::pow(10,((-4.43-54/(T-229-Ce*5e-3)-Ce*0.22e-3)));
 }
 inline double rateConst(size_t ix, double T)
 {

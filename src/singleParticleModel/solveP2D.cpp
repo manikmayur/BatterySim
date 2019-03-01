@@ -222,7 +222,6 @@ int runP2D(void)
 	N_VDestroy(up);
 	N_VDestroy(res);
 	free(data);
-
 	return(0);
 }
 
@@ -248,7 +247,7 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 	realtype Cs, CsAvg, Ce, Celt, Cert, T, Tlt, Trt;
 	realtype phiS, phiSlt, phiSrt, diff_phiS;
 	realtype phiL, phiLlt, phiLrt, diff_phiL1, diff_phiL2, g;
-	realtype diff_T, diff_Ce, sCe, sCs, sCsAvg, sphiS, sphiL;
+	realtype diff_T, diff_Ce, sT, sCe, sCs, sCsAvg, sphiS, sphiL;
 	realtype qIrr, qRev, qOut, qTot, qOhm;
 	double dx2lt, dx2rt, betal, betar, difflt, diffrt;
 	realtype Ucell, Ueq, dUdT, iloc=0.0;
@@ -257,7 +256,7 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 
 	Ucell=Ueq=dUdT=ZERO;
 	qIrr=qRev=qOut=qTot=qOhm=ZERO;
-	sCe=sCs=sCsAvg=sphiS=sphiL=ZERO;
+	sT=sCe=sCs=sCsAvg=sphiS=sphiL=ZERO;
 
 	udata = N_VGetArrayPointer(uu);
 	updata = N_VGetArrayPointer(up);
@@ -357,6 +356,9 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		qIrr = F*dom.aLi*iloc*(phiS-phiL-Ueq);
 		qRev = F*dom.aLi*iloc*T*dUdT;
 		qOut = p_h*(T-p_Tamb);
+		qTot = qIrr+qRev;
+		sT = (dom.domType==AL||dom.domType==CU)?
+				SUNSQR(p_Iapp)/sigmaS(jx):qTot;
 		iloc = TWO*rateConst(jx,T)*std::sqrt(Ce*(dom.cLiMax-Cs)*Cs)*std::sinh(0.5*R/(F*T)*(phiS-phiL-Ueq));
 		iloc = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:iloc;
@@ -374,7 +376,7 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		IJth(resv,data->idxCsAvg, jx) = IJth(updata,data->idxCsAvg,jx) - sCsAvg;
 		IJth(resv,data->idxCs,jx) = Cs-CsAvg-sCs;
 		IJth(resv,data->idxCe,jx) = IJth(updata,data->idxCe,jx) - rpor*(diff_Ce + sCe);
-		IJth(resv,data->idxT,jx) = IJth(updata,data->idxT,jx) - 1/(dom.rho*dom.cP)*diff_T;
+		IJth(resv,data->idxT,jx) = IJth(updata,data->idxT,jx) - 1/(dom.rho*dom.cP)*(diff_T + sT);
 		IJth(resv,data->idxphiS,jx) = IJth(updata,data->idxphiS,jx) - rCdl*(diff_phiS + sphiS);
 		IJth(resv,data->idxphiL,jx) = IJth(updata,data->idxphiL,jx) - rCdl*(diff_phiL1 + diff_phiL2 + sphiL);
 	}
@@ -391,13 +393,6 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
  * SetInitialProfile: routine to initialize u, up, and id vectors.
  */
 
-/* Free data memory */
-
-static void FreeUserData(UserData data)
-{
-	free(data);
-}
-
 /*
  * Print Output
  */
@@ -406,7 +401,7 @@ static void printOutputP2D(void *mem, realtype t, N_Vector uu, std::vector<FILE*
 		void *user_data)
 {
 	int retval;
-	realtype umax, hused;
+	realtype hused;
 	realtype *udata;
 	double x = ZERO;
 	long int nst, nni, nje, nre, nreLS;
@@ -414,23 +409,8 @@ static void printOutputP2D(void *mem, realtype t, N_Vector uu, std::vector<FILE*
 	UserData data;
 
 	data = (UserData)user_data;
-	umax = N_VMaxNorm(uu);
 	udata = N_VGetArrayPointer(uu);
 
-	retval = IDAGetLastOrder(mem, &kused);
-	check_retval(&retval, "IDAGetLastOrder", 1);
-	retval = IDAGetNumSteps(mem, &nst);
-	check_retval(&retval, "IDAGetNumSteps", 1);
-	retval = IDAGetNumNonlinSolvIters(mem, &nni);
-	check_retval(&retval, "IDAGetNumNonlinSolvIters", 1);
-	retval = IDAGetNumResEvals(mem, &nre);
-	check_retval(&retval, "IDAGetNumResEvals", 1);
-	retval = IDAGetLastStep(mem, &hused);
-	check_retval(&retval, "IDAGetLastStep", 1);
-	retval = IDAGetNumJacEvals(mem, &nje);
-	check_retval(&retval, "IDAGetNumJacEvals", 1);
-	retval = IDAGetNumLinResEvals(mem, &nreLS);
-	check_retval(&retval, "IDAGetNumLinResEvals", 1);
 	for (size_t jx=0; jx<NX; jx++)
 	{
 		domain dom = getDomain(jx);
