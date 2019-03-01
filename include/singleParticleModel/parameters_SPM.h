@@ -121,9 +121,9 @@ double const p_theta2 = (-6.824e-6*abs(p_Iapp) + 1.372e-5)*pow((p_Tamb - 273.15)
 
 inline double p_Rel(double T) {return p_theta1 + p_theta2*(T - p_Tamb);}
 
-inline double sigmaL(double ce, double T)
+inline double sigmaL(double por, double ce, double T)
 {
-	return 1e-4*ce*std::pow(-10.5+0.668*1e-3*ce+0.494*1e-6*std::pow(ce,2)
+	return std::pow(por,p_brugg)*1e-4*ce*std::pow(-10.5+0.668*1e-3*ce+0.494*1e-6*std::pow(ce,2)
 			+(0.074-1.78*1e-5*ce-8.86*1e-10*std::pow(ce,2))*T+(-6.96*1e-5+2.8*1e-8*ce)*std::pow(T,2),2);
 }
 
@@ -152,6 +152,7 @@ typedef struct
 	double dx;
 	double rho;
 	double por;
+	double epsF;
 	double cP;
 	double kappaL;
 	double sigmaL;
@@ -159,6 +160,9 @@ typedef struct
 	double kappaS;
 	double sigmaS;
 	double diffS;
+	double k;
+	double actEK;
+	double actED;
 	double rP;
 	double xLiInit;
 	double cLiMax;
@@ -176,6 +180,7 @@ domain const al =
 	.dx = al.L/al.NX,
 	.rho = params["Aluminium"]["density"].as<double>(),
 	.por = params["Aluminium"]["porosity"].as<double>(),
+	.epsF = 0.0,
 	.cP = params["Aluminium"]["cP"].as<double>(),
 	.kappaL = 0.0,
 	.sigmaL = 0.0,
@@ -183,6 +188,9 @@ domain const al =
 	.kappaS = params["Aluminium"]["kappaS"].as<double>(),
 	.sigmaS = params["Aluminium"]["sigmaS"].as<double>(),
 	.diffS= 0.0,
+	.k = 0.0,
+	.actEK = 0.0,
+	.actED = 0.0,
 	.rP= 0.0,
 	.xLiInit = 0.0,
 	.cLiMax = 0.0,
@@ -200,6 +208,7 @@ domain const ca =
 	.dx = ca.L/ca.NX,
 	.rho = params["Cathode"]["density"].as<double>(),
 	.por = params["Cathode"]["porosity"].as<double>(),
+	.epsF = params["Cathode"]["fillerFrac"].as<double>(),
 	.cP = params["Cathode"]["cP"].as<double>(),
 	.kappaL = 0.0,
 	.sigmaL = 0.0,
@@ -207,6 +216,9 @@ domain const ca =
 	.kappaS = params["Cathode"]["kappaS"].as<double>(),
 	.sigmaS = params["Cathode"]["sigmaS"].as<double>(),
 	.diffS = params["Cathode"]["diffS"].as<double>(),
+	.k = params["Cathode"]["rateConst"].as<double>(),
+	.actEK = params["Cathode"]["actEK"].as<double>(),
+	.actED = params["Cathode"]["actED"].as<double>(),
 	.rP = params["Cathode"]["rP"].as<double>(),
 	.xLiInit = params["Cathode"]["xLiInit"].as<double>(),
 	.cLiMax = params["Cathode"]["cLiMax"].as<double>(),
@@ -224,6 +236,7 @@ domain const el =
 	.dx = el.L/el.NX,
 	.rho = params["Separator"]["density"].as<double>(),
 	.por = params["Separator"]["porosity"].as<double>(),
+	.epsF = 0.0,
 	.cP = params["Separator"]["cP"].as<double>(),
 	.kappaL = 0.0,
 	.sigmaL = 0.0,
@@ -231,6 +244,9 @@ domain const el =
 	.kappaS = params["Separator"]["kappaS"].as<double>(),
 	.sigmaS = params["Separator"]["sigmaS"].as<double>(),
 	.diffS = 0.0,
+	.k = 0.0,
+	.actEK = 0.0,
+	.actED = 0.0,
 	.rP = 0.0,
 	.xLiInit = 0.0,
 	.cLiMax = 0.0,
@@ -248,6 +264,7 @@ domain const an =
 	.dx = an.L/an.NX,
 	.rho = params["Anode"]["density"].as<double>(),
 	.por = params["Anode"]["porosity"].as<double>(),
+	.epsF = params["Anode"]["fillerFrac"].as<double>(),
 	.cP = params["Anode"]["cP"].as<double>(),
 	.kappaL = 0.0,
 	.sigmaL = 0.0,
@@ -255,6 +272,9 @@ domain const an =
 	.kappaS = params["Anode"]["kappaS"].as<double>(),
 	.sigmaS = params["Anode"]["sigmaS"].as<double>(),
 	.diffS = params["Anode"]["diffS"].as<double>(),
+	.k = params["Anode"]["rateConst"].as<double>(),
+	.actEK = params["Anode"]["actEK"].as<double>(),
+	.actED = params["Anode"]["actED"].as<double>(),
 	.rP = params["Anode"]["rP"].as<double>(),
 	.xLiInit = params["Anode"]["xLiInit"].as<double>(),
 	.cLiMax = params["Anode"]["cLiMax"].as<double>(),
@@ -272,6 +292,7 @@ domain const cu =
 	.dx = an.L/an.NX,
 	.rho = params["Copper"]["density"].as<double>(),
 	.por = params["Copper"]["porosity"].as<double>(),
+	.epsF = 0.0,
 	.cP = params["Copper"]["cP"].as<double>(),
 	.kappaL = 0.0,
 	.sigmaL = 0.0,
@@ -279,6 +300,9 @@ domain const cu =
 	.kappaS = params["Copper"]["kappaS"].as<double>(),
 	.sigmaS = params["Copper"]["sigmaS"].as<double>(),
 	.diffS = 0.0,
+	.k = 0.0,
+	.actEK = 0.0,
+	.actED = 0.0,
 	.rP = 0.0,
 	.xLiInit = 0.0,
 	.cLiMax = 0.0,
@@ -300,19 +324,27 @@ inline domain getDomain(size_t jx)
 }
 inline double dx(size_t ix)
 {
-	return (getDomain(ix)).dx;
+	return getDomain(ix).dx;
 }
 inline double kappaS(size_t ix)
 {
-	return (getDomain(ix)).kappaS;
+	return getDomain(ix).kappaS;
 }
 inline double sigmaS(size_t ix)
 {
-	return (getDomain(ix)).sigmaS;
+	return getDomain(ix).sigmaS;
 }
 inline double diffL(double por,double Ce, double T)
 {
 	return std::pow(por,p_brugg)*1e-4*std::pow(10,((-4.43-54/(T-229-Ce*5e-3)-Ce*0.22e-3)));
+}
+inline double diffS(size_t ix, double T)
+{
+	return getDomain(ix).diffS*std::exp(-getDomain(ix).actED/R*(1/T-1/Tref));
+}
+inline double rateConst(size_t ix, double T)
+{
+	return getDomain(ix).k*std::exp(-getDomain(ix).actEK/R*(1/T-1/Tref));
 }
 
 #endif /* PARAMETERS_SPM_H_ */

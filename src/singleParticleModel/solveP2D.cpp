@@ -347,9 +347,9 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		diff_phiS = diffrt/dx2rt*(phiSrt-phiS)-difflt/dx2lt*(phiS-phiSlt);
 		//
 		difflt = (jx == dom.idx0 && jx > ca.idx0)?
-				sigmaL(Ce,T)*sigmaL(Celt,Tlt)/(betal*sigmaL(Ce,T)+(1-betal)*sigmaL(Celt,Tlt)):sigmaL(Ce,T);
+				sigmaL(dom.por,Ce,T)*sigmaL((getDomain(jx-1)).por,Celt,Tlt)/(betal*sigmaL(dom.por,Ce,T)+(1-betal)*sigmaL((getDomain(jx-1)).por,Celt,Tlt)):sigmaL(dom.por,Ce,T);
 		diffrt = (jx == dom.idxL && jx < an.idxL)?
-				sigmaL(Ce,T)*sigmaL(Cert,Trt)/(betar*sigmaL(Cert,Trt)+(1-betar)*sigmaL(Ce,T)):sigmaL(Ce,T);
+				sigmaL(dom.por,Ce,T)*sigmaL((getDomain(jx+1)).por,Cert,Trt)/(betar*sigmaL((getDomain(jx+1)).por,Cert,Trt)+(1-betar)*sigmaL(dom.por,Ce,T)):sigmaL(dom.por,Ce,T);
 		diff_phiL1 = diffrt/dx2rt*(phiLrt-phiL)-difflt/dx2lt*(phiL-phiLlt);
 		diff_phiL2 = (jx >= ca.idx0 && jx <= an.idxL)?
 				diffrt/dx2rt*g*(T+Trt)/TWO*log(Cert/Ce)-difflt/dx2lt*g*(T+Tlt)/TWO*log(Ce/Celt):ZERO;
@@ -357,13 +357,13 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		qIrr = F*dom.aLi*iloc*(phiS-phiL-Ueq);
 		qRev = F*dom.aLi*iloc*T*dUdT;
 		qOut = p_h*(T-p_Tamb);
-		iloc = TWO*dom.sigmaL*std::sqrt(Ce*(dom.cLiMax-Cs)*Cs)*std::sinh(0.5*R/(F*T)*(phiS-phiL-Ueq));
+		iloc = TWO*rateConst(jx,T)*std::sqrt(Ce*(dom.cLiMax-Cs)*Cs)*std::sinh(0.5*R/(F*T)*(phiS-phiL-Ueq));
 		iloc = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:iloc;
 		sCsAvg = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:-3.0*iloc/dom.rP;
 		sCs = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
-				ZERO:-dom.rP*iloc/(dom.diffS*5);
+				ZERO:-dom.rP*iloc/(diffS(jx,T)*5);
 		sCe = dom.aLi*(1-p_tp)*iloc;
 		sphiS = dom.aLi*F*iloc;
 		sphiL = -dom.aLi*F*iloc;
