@@ -80,7 +80,7 @@ omegaS: 0 # [cm^3/mol] Partial molar volume of Li in SEI (Laresgoiti 2015 JPS)
 Aluminium: {
    thickness: 1e-5,
    density: 2700, #[kg/m3] "Density"
-   porosity: 1, # [1] "Porosity"
+   porosity: 0, # [1] "Porosity"
    cP: 897, # [J/(kg*K)] "Specific heat"
    kappaS: 237, # [W/(mK)] "Thermal conductivity"
    sigmaS: 3.55e7 # [S/m] "Electrical conductivity"
@@ -127,7 +127,7 @@ Anode: {
 Copper: {
    thickness: 1e-5,
    density: 8940, #[kg/m3] "Density"
-   porosity: 1, # [1] "Porosity"
+   porosity: 0, # [1] "Porosity"
    cP: 385, # [J/(kg*K)] "Specific heat"
    kappaS: 401, # [W/(mK)] "Thermal conductivity"
    sigmaS: 5.96e7 # [S/m] "Electrical conductivity"

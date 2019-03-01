@@ -71,6 +71,7 @@ double const p_kappa_cu = 401;  // From material datasheets and standard scienti
 //Current collector conductivities [S/m]
 double const p_sig_al = 3.55e7;
 double const p_sig_cu = 5.96e7;
+double const p_brugg = 0.4;
 
 // Cell parameters
 double const p_Lsep = params["L_sep"].as<double>(); // [m] "Separator thickness"
@@ -303,8 +304,11 @@ static double sigmaS(size_t ix)
 {
 	return (getDomain(ix)).sigmaS;
 }
-static double diffL(size_t ix)
+//static double diffL(size_t ix)
+inline double diffL(double por,double Ce, double T)
 {
-	return (getDomain(ix)).diffL;
+	//return (getDomain(ix)).diffL;
+	//return p_DLi;
+	return std::pow(por,p_brugg)*1e-4*std::pow(10,((-4.43-54/(T-229-Ce*5e-3)-Ce*0.22e-3)));
 }
 #endif /* PARAMETERS_SPM_H_ */
