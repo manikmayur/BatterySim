@@ -163,6 +163,7 @@ typedef struct
 	double xLiInit;
 	double cLiMax;
 	double aLi;
+	double Cdl;
 } domain;
 
 domain const al =
@@ -185,7 +186,8 @@ domain const al =
 	.rP= 0.0,
 	.xLiInit = 0.0,
 	.cLiMax = 0.0,
-	.aLi = 0.0
+	.aLi = 0.0,
+	.Cdl = 0.0
 };
 
 domain const ca =
@@ -208,7 +210,8 @@ domain const ca =
 	.rP = params["Cathode"]["rP"].as<double>(),
 	.xLiInit = params["Cathode"]["xLiInit"].as<double>(),
 	.cLiMax = params["Cathode"]["cLiMax"].as<double>(),
-	.aLi = params["Cathode"]["aLi"].as<double>()
+	.aLi = params["Cathode"]["aLi"].as<double>(),
+	.Cdl = params["Cathode"]["Cdl"].as<double>()
 };
 
 domain const el =
@@ -231,7 +234,8 @@ domain const el =
 	.rP = 0.0,
 	.xLiInit = 0.0,
 	.cLiMax = 0.0,
-	.aLi = 0.0
+	.aLi = 0.0,
+	.Cdl = 0.0
 };
 
 domain const an =
@@ -254,7 +258,8 @@ domain const an =
 	.rP = params["Anode"]["rP"].as<double>(),
 	.xLiInit = params["Anode"]["xLiInit"].as<double>(),
 	.cLiMax = params["Anode"]["cLiMax"].as<double>(),
-	.aLi = params["Anode"]["aLi"].as<double>()
+	.aLi = params["Anode"]["aLi"].as<double>(),
+	.Cdl = params["Anode"]["Cdl"].as<double>()
 };
 
 domain const cu =
@@ -277,12 +282,13 @@ domain const cu =
 	.rP = 0.0,
 	.xLiInit = 0.0,
 	.cLiMax = 0.0,
-	.aLi = 0.0
+	.aLi = 0.0,
+	.Cdl = 0.0
 };
 
 size_t const NXTOTAL = al.NX+ca.NX+el.NX+an.NX+cu.NX;
 
-static domain getDomain(size_t jx)
+inline domain getDomain(size_t jx)
 {
 	if (jx >= al.idx0 && jx <= al.idxL) return al;
 	if (jx >= ca.idx0 && jx <= ca.idxL) return ca;
@@ -292,23 +298,21 @@ static domain getDomain(size_t jx)
 	else std::cout<<"getDomain: Unknown grid index "<<jx<<std::endl;
 	return al;
 }
-static double dx(size_t ix)
+inline double dx(size_t ix)
 {
 	return (getDomain(ix)).dx;
 }
-static double kappaS(size_t ix)
+inline double kappaS(size_t ix)
 {
 	return (getDomain(ix)).kappaS;
 }
-static double sigmaS(size_t ix)
+inline double sigmaS(size_t ix)
 {
 	return (getDomain(ix)).sigmaS;
 }
-//static double diffL(size_t ix)
 inline double diffL(double por,double Ce, double T)
 {
-	//return (getDomain(ix)).diffL;
-	//return p_DLi;
 	return std::pow(por,p_brugg)*1e-4*std::pow(10,((-4.43-54/(T-229-Ce*5e-3)-Ce*0.22e-3)));
 }
+
 #endif /* PARAMETERS_SPM_H_ */

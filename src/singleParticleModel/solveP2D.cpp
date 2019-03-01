@@ -364,19 +364,19 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 				ZERO:-3.0*iloc/dom.rP;
 		sCs = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:-dom.rP*iloc/(dom.diffS*5);
-		sCe = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
-				ZERO:dom.aLi*(1-p_tp)*1e-5;//dom.aLi*(1-p_tp)*iloc;
+		sCe = dom.aLi*(1-p_tp)*iloc;
 		sphiS = dom.aLi*F*iloc;
 		sphiL = -dom.aLi*F*iloc;
 		//std::cout<<dom.domType<<" "<<iloc<<"\n";
 		//
 		double rpor = (jx>=ca.idx0 && jx<=an.idxL)?1/dom.por:ZERO;
+		double rCdl = (dom.domType==CA||dom.domType==AN)?1/dom.Cdl:ZERO;
 		IJth(resv,data->idxCsAvg, jx) = IJth(updata,data->idxCsAvg,jx) - sCsAvg;
 		IJth(resv,data->idxCs,jx) = Cs-CsAvg-sCs;
 		IJth(resv,data->idxCe,jx) = IJth(updata,data->idxCe,jx) - rpor*(diff_Ce + sCe);
-		IJth(resv,data->idxT,jx) = dom.rho*dom.cP*IJth(updata,data->idxT,jx) - diff_T;
-		IJth(resv,data->idxphiS,jx) = IJth(updata,data->idxphiS,jx) + diff_phiS - sphiS;
-		IJth(resv,data->idxphiL,jx) = IJth(updata,data->idxphiL,jx) + diff_phiL1- diff_phiL2 - sphiL;
+		IJth(resv,data->idxT,jx) = IJth(updata,data->idxT,jx) - 1/(dom.rho*dom.cP)*diff_T;
+		IJth(resv,data->idxphiS,jx) = IJth(updata,data->idxphiS,jx) - rCdl*(diff_phiS + sphiS);
+		IJth(resv,data->idxphiL,jx) = IJth(updata,data->idxphiL,jx) - rCdl*(diff_phiL1 + diff_phiL2 + sphiL);
 	}
 	return(0);
 }

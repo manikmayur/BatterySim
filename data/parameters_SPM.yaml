@@ -98,7 +98,8 @@ Cathode: {
    xLiInit: 25751, # [1] "Initial Lithium molefraction"
    cLiMax: 51554, # [mol/m3] "Max Lithium concentration"
    aLi: 885000, # [m2/m3] "Particle surface to area volume"
-   diffS: 1e-14 # [m2/s] "Lithium diffusion in particle"
+   diffS: 1e-14, # [m2/s] "Lithium diffusion in particle"
+   Cdl: 1e10 # [m2/s] "Double layer capacitance"
 }
 # Separator properties
 Separator: {
@@ -121,7 +122,8 @@ Anode: {
    xLiInit: 26128, # [1] "Initial Lithium molefraction"
    cLiMax: 30555, # [mol/m3] "Max Lithium concentration"
    aLi: 723600, # [m2/m3] "Particle surface to area volume"
-   diffS: 3.9e-14 # [m2/s] "Lithium diffusion in particle"
+   diffS: 3.9e-14, # [m2/s] "Lithium diffusion in particle"
+   Cdl: 1e10 # [m2/s] "Double layer capacitance"
 }
 # Anode current collector properties
 Copper: {
