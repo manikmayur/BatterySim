@@ -83,8 +83,8 @@ static int SetInitialProfile(UserData data, N_Vector uu, N_Vector up,
 	for (size_t jx=0; jx < NX; jx++)
 	{
 		dom = getDomain(jx);
-		IJth(udata,data->idxCsAvg,jx) = (dom.domType==CA||dom.domType==AN)?dom.xLiInit:ZERO;
-		IJth(udata,data->idxCs,jx) = (dom.domType==CA||dom.domType==AN)?dom.xLiInit:ZERO;
+		IJth(udata,data->idxCsAvg,jx) = (dom.domType==CA||dom.domType==AN)?dom.cLiInit:ZERO;
+		IJth(udata,data->idxCs,jx) = (dom.domType==CA||dom.domType==AN)?dom.cLiInit:ZERO;
 		IJth(udata,data->idxCe,jx) = (jx<ca.idx0||jx>an.idxL)?ZERO:p_cE;
 		IJth(udata,data->idxT,jx) = Tref;
 		IJth(udata,data->idxphiS,jx) = ZERO;
@@ -93,15 +93,18 @@ static int SetInitialProfile(UserData data, N_Vector uu, N_Vector up,
 		IJth(iddata,data->idxCs,jx) = ZERO;
 		IJth(iddata,data->idxphiS,jx) = ZERO;
 		IJth(iddata,data->idxphiL,jx) = ZERO;
+		IJth(updata,data->idxCs,jx) = ZERO;
+		IJth(updata,data->idxphiS,jx) = ZERO;
+		IJth(updata,data->idxphiL,jx) = ZERO;
 	}
 	/* Initialize up vector to 0. */
 	 N_VConst(ZERO, up);
 
 	  /* heatres sets res to negative of ODE RHS values at interior points. */
-	  //heatres(ZERO, uu, up, res, data);
+	 heatres(ZERO, uu, up, res, data);
 
 	  /* Copy -res into up to get correct interior initial up values. */
-	 // N_VScale(-ONE, res, up);
+	 N_VScale(-ONE, res, up);
 
 	return(0);
 }
@@ -129,10 +132,13 @@ int runP2D(void)
 	/* Create vectors uu, up, res, constraints, id. */
 	uu = N_VNew_Serial(NEQ);
 	if(check_retval((void *)uu, "N_VNew_Serial", 0)) return(1);
+
 	up = N_VNew_Serial(NEQ);
 	if(check_retval((void *)up, "N_VNew_Serial", 0)) return(1);
+
 	id = N_VNew_Serial(NEQ);
 	if(check_retval((void *)id, "N_VNew_Serial", 0)) return(1);
+
 	res = N_VNew_Serial(NEQ);
 	if(check_retval((void *)res, "N_VNew_Serial", 0)) return(1);
 
@@ -153,6 +159,7 @@ int runP2D(void)
 
 	/* Initialite Cantera */
 	initCanteraSPM();
+
 	/* Call IDACreate and IDAMalloc to initialize solution */
 	mem = IDACreate();
 	if(check_retval((void *)mem, "IDACreate", 0)) return(1);
@@ -182,6 +189,10 @@ int runP2D(void)
 	retval = IDASetLinearSolver(mem, LS, A);
 	if(check_retval(&retval, "IDASetLinearSolver", 1)) return(1);
 
+	/* Call IDACalcIC (with default options) to correct the initial values. */
+
+	retval = IDACalcIC(mem, IDA_YA_YDP_INIT, t1);
+	if(check_retval(&retval, "IDACalcIC", 1)) return(1);
 
 	/* Print output heading. */
 	files[data->idxCsAvg-1] = fopen("outP2D_concSLiAvg.dat","w");
@@ -294,18 +305,18 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		phiS = IJth(udata,data->idxphiS,jx);
 		phiL = IJth(udata,data->idxphiL,jx);
 		//
-		openCircuitPotential(jx, Cs,T, Ueq, dUdT);
-		//
+		openCircuitPotential(jx, Cs, T, Ueq, dUdT);
+		// Ce
 		Celt = (jx == ca.idx0) ? Ce : IJth(udata,data->idxCe,jx-1);
 		Cert = (jx == an.idxL) ? Ce : IJth(udata,data->idxCe,jx+1);
-		//
+		// T
 		Tlt = ONE/(ONE+(p_h*al.dx/(TWO*al.kappaS)))*(p_h*al.dx/al.kappaS*p_Tamb
 			+(ONE-p_h*al.dx/(TWO*al.kappaS))*IJth(udata,data->idxT,al.idx0));
 		Tlt = (jx == al.idx0) ? Tlt : IJth(udata,data->idxT,jx-1);
 		Trt = ONE/(ONE+(p_h*cu.dx/(TWO*cu.kappaS)))*(p_h*cu.dx/cu.kappaS*p_Tamb
 			+(ONE-p_h*cu.dx/(TWO*cu.kappaS))*IJth(udata,data->idxT,cu.idxL));
 		Trt = (jx == cu.idxL) ? Trt : IJth(udata,data->idxT,jx+1);
-		//
+		// phiS
 		if (jx == al.idx0)
 			phiSlt = phiS+dom.dx*p_Iapp/dom.sigmaS;
 		else if (jx == an.idx0)
@@ -328,31 +339,31 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 				dx(jx-1)/(dx(jx)+dx(jx-1)):0.5;
 		betar = (jx == dom.idxL && jx != cu.idxL)?
 				dx(jx)/(dx(jx)+dx(jx+1)):0.5;
-		//
+		// T
 		difflt = (jx == dom.idx0 && jx != al.idx0)?
 				kappaS(jx)*kappaS(jx-1)/(betal*kappaS(jx)+(1-betal)*kappaS(jx-1)):kappaS(jx);
 		diffrt = (jx == dom.idxL && jx != cu.idxL)?
 				kappaS(jx)*kappaS(jx+1)/(betar*kappaS(jx+1)+(1-betar)*kappaS(jx)):kappaS(jx);
 		diff_T = diffrt/dx2rt*(Trt-T)-difflt/dx2lt*(T-Tlt);
-		//
+		// Ce
 		difflt = (jx == dom.idx0 && jx > ca.idx0)?
 				diffL(dom.por,Ce,T)*diffL((getDomain(jx-1)).por,Celt,Tlt)/(betal*diffL(dom.por,Ce,T)+(1-betal)*diffL((getDomain(jx-1)).por,Celt,Tlt)):diffL(dom.por,Ce,T);
 		diffrt = (jx == dom.idxL && jx < an.idxL)?
 				diffL(dom.por,Ce,T)*diffL((getDomain(jx+1)).por,Cert,Trt)/(betar*diffL((getDomain(jx+1)).por,Cert,Trt)+(1-betar)*diffL(dom.por,Ce,T)):diffL(dom.por,Ce,T);
 		diff_Ce = diffrt/dx2rt*(Cert-Ce)-difflt/dx2lt*(Ce-Celt);
-		//std::cout<<dom.domType<<" "<<diffrt<<" "<<difflt<<" "<<diff_Ce<<"\n";
-		//
+		// phiS
 		difflt = (jx == ca.idx0 || jx == cu.idx0)?
 				sigmaS(jx)*sigmaS(jx-1)/(betal*sigmaS(jx)+(1-betal)*sigmaS(jx-1)):sigmaS(jx);
 		diffrt = (jx == al.idxL || jx == an.idxL)?
 				sigmaS(jx)*sigmaS(jx+1)/(betar*sigmaS(jx+1)+(1-betar)*sigmaS(jx)):sigmaS(jx);
 		diff_phiS = diffrt/dx2rt*(phiSrt-phiS)-difflt/dx2lt*(phiS-phiSlt);
-		//
+		// phiL
 		difflt = (jx == dom.idx0 && jx > ca.idx0)?
 				sigmaL(dom.por,Ce,T)*sigmaL((getDomain(jx-1)).por,Celt,Tlt)/(betal*sigmaL(dom.por,Ce,T)+(1-betal)*sigmaL((getDomain(jx-1)).por,Celt,Tlt)):sigmaL(dom.por,Ce,T);
 		diffrt = (jx == dom.idxL && jx < an.idxL)?
 				sigmaL(dom.por,Ce,T)*sigmaL((getDomain(jx+1)).por,Cert,Trt)/(betar*sigmaL((getDomain(jx+1)).por,Cert,Trt)+(1-betar)*sigmaL(dom.por,Ce,T)):sigmaL(dom.por,Ce,T);
-		diff_phiL1 = diffrt/dx2rt*(phiLrt-phiL)-difflt/dx2lt*(phiL-phiLlt);
+		diff_phiL1 = (jx >= ca.idx0 && jx <= an.idxL)?
+				diffrt/dx2rt*(phiLrt-phiL)-difflt/dx2lt*(phiL-phiLlt):ZERO;
 		diff_phiL2 = (jx >= ca.idx0 && jx <= an.idxL)?
 				diffrt/dx2rt*g*(T+Trt)/TWO*log(Cert/Ce)-difflt/dx2lt*g*(T+Tlt)/TWO*log(Ce/Celt):ZERO;
 		// Set source terms
@@ -372,10 +383,11 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 				SUNSQR(p_Iapp)/sigmaS(jx):qTot;
 		sphiS = dom.aLi*F*iloc;
 		sphiL = -dom.aLi*F*iloc;
-		/*
-		std::cout<<dom.domType<<" iloc: "<<iloc<<" sCsAvg: "<<sCsAvg<<" sCs: "<<sCs
+		/*std::cout<<dom.domType<<" iloc: "<<iloc<<" sCsAvg: "<<sCsAvg<<" sCs: "<<sCs
 				<<" sCe: "<<sCe<<" sphiS: "<<sphiS<<" sphiL:"<<sphiL<<" sT: "<<sT<<"\n";
-		std::cout<<"Cs: "<<Cs<<" Ueq: "<<Ueq<<" dUdT:"<<dUdT<<"\n";*/
+		std::cout<<"Cs: "<<Cs<<" Ueq: "<<Ueq<<" dUdT:"<<dUdT<<"\n";
+		std::cout<<"diff_phiS: "<<diff_phiS<<" diff_phiL1: "<<diff_phiL1<<" diff_phiL2:"<<diff_phiL2<<"\n";
+		*/
 		//
 		double rpor = (jx>=ca.idx0 && jx<=an.idxL)?1/dom.por:ZERO;
 		double rCdl = (dom.domType==CA||dom.domType==AN)?1/dom.Cdl:ZERO;

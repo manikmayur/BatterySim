@@ -24,9 +24,10 @@ cathodeSurfaceName: "edge_cathode_electrolyte"
 anodeSurfaceName: "edge_anode_electrolyte"
 
 # Load parameters
-I1C: 29.23 # [A] "1C discharge current"
+I1C: 29.23 # [A] 1.656 "1C discharge current"
 cR: -1 # [1] "C-rate"
 T_amb: 298.15 # [K] "Ambient temperature"
+InitSOC: 100 #[%] "Initial SOC"
 
 # Cell parameters
 L_sep: 25e-6 # [m] "Separator thickness"
@@ -78,7 +79,7 @@ omegaS: 0 # [cm^3/mol] Partial molar volume of Li in SEI (Laresgoiti 2015 JPS)
 
 # Cathode current collector properties
 Aluminium: {
-   thickness: 1e-5,
+   thickness: 10e-6,
    density: 2700, #[kg/m3] "Density"
    porosity: 0, # [1] "Porosity"
    cP: 897, # [J/(kg*K)] "Specific heat"
@@ -88,27 +89,28 @@ Aluminium: {
 
 # Cathode properties
 Cathode: {
-   thickness: 1e-5,
+   thickness: 80e-6,
    density: 2700, #[kg/m3] "Density"
    porosity: 0.385, # [1] "Porosity"
    fillerFrac: 0.025, # [1] "Filler fraction"
    cP: 700, # [J/(kg*K)] "Specific heat"
    kappaS: 2.1, # [W/(mK)] "Thermal conductivity"
    sigmaS: 100, # [S/m] "Electrical conductivity"
-   rateConst: 2.334e-11, # [m2.5/(mol0.5s)] "Reaction rate constant"
+   rateConst: 2.334e-9, # 2.334e-11 [m2.5/(mol0.5s)] "Reaction rate constant"
    actEK: 5000, # [J/mol] "Activation energy CTR"
    actED: 5000, # [J/mol] "Activation energy Diffusion"
    rP: 2e-6, # [m] "Particle radius"
-   xLiInit: 25751, # [1] "Initial Lithium molefraction"
+   xLiMin: 0.49550, # [1] "Lithium molefraction at 100%SOC"
+   xLiMax: 0.99174, # [1] "Lithium molefraction at 0%SOC"
    cLiMax: 51554, # [mol/m3] "Max Lithium concentration"
    aLi: 885000, # [m2/m3] "Particle surface to area volume"
    diffS: 1e-14, # [m2/s] "Lithium diffusion in particle"
-   Cdl: 1e10 # [F] "Double layer capacitance"
+   Cdl: 1e-20 # [F] "Double layer capacitance"
 }
 
 # Separator properties
 Separator: {
-   thickness: 2.5e-5,
+   thickness: 25e-6,
    density: 1100, #[kg/m3] "Density"
    porosity: 0.724, # [1] "Porosity"
    cP: 700, # [J/(kg*K)] "Specific heat"
@@ -118,26 +120,27 @@ Separator: {
 
 # Anode properties
 Anode: {
-   thickness: 8.8e-5,
+   thickness: 88e-6,
    density: 2500, #[kg/m3] "Density"
    porosity: 0.485, # [1] "Porosity"
    fillerFrac: 0.0326, # [1] "Filler fraction"
    cP: 700, # [J/(kg*K)] "Specific heat"
    kappaS: 1.7, # [W/(mK)] "Thermal conductivity"
    sigmaS: 100, # [S/m] "Electrical conductivity"
-   rateConst: 5.031e-11, # [m2.5/(mol0.5s)] "Reaction rate constant"
+   rateConst: 5.031e-9, # 5.031e-11[m2.5/(mol0.5s)] "Reaction rate constant"
    actEK: 5000, # [J/mol] "Activation energy CTR"
    actED: 5000, # [J/mol] "Activation energy Diffusion"
    rP: 2e-6, # [m] "Particle radius"
-   xLiInit: 26128, # [1] "Initial Lithium molefraction"
+   xLiMin: 0.01429, # [1] "Lithium molefraction at 0%SOC"
+   xLiMax: 0.85510, # [1] "Lithium molefraction at 100%SOC"
    cLiMax: 30555, # [mol/m3] "Max Lithium concentration"
    aLi: 723600, # [m2/m3] "Particle surface to area volume"
    diffS: 3.9e-14, # [m2/s] "Lithium diffusion in particle"
-   Cdl: 1e10 # [F] "Double layer capacitance"
+   Cdl: 1e-20 # [F] "Double layer capacitance"
 }
 # Anode current collector properties
 Copper: {
-   thickness: 1e-5,
+   thickness: 10e-6,
    density: 8940, #[kg/m3] "Density"
    porosity: 0, # [1] "Porosity"
    cP: 385, # [J/(kg*K)] "Specific heat"

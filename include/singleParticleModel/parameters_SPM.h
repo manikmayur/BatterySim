@@ -55,22 +55,6 @@ double const p_tTotal = params["tTotal"].as<double>(); // [s] "Total runtime"
 double const p_Tamb = params["T_amb"].as<double>(); // [K] "Ambient temperature"
 
 double const p_h = 1; //[W/m2K]
-// Thermal conductivities [ W / (m K) ]
-
-// Aluminium current collector
-double const p_kappa_al = 237;  // From material datasheets and standard scientific tables
-// Positive electrode
-double const p_kappa_ca  = 2.1;
-// Separator
-double const p_kappa_el  = 0.16;
-// Negative Electrode
-double const p_kappa_an  = 1.7;
-// Copper current collector
-double const p_kappa_cu = 401;  // From material datasheets and standard scientific tables
-
-//Current collector conductivities [S/m]
-double const p_sig_al = 3.55e7;
-double const p_sig_cu = 5.96e7;
 double const p_brugg = 0.4;
 
 // Cell parameters
@@ -158,8 +142,8 @@ typedef struct
 	double actEK;
 	double actED;
 	double rP;
-	double xLiInit;
 	double cLiMax;
+	double cLiInit;
 	double aLi;
 	double Cdl;
 } domain;
@@ -186,8 +170,8 @@ domain const al =
 	.actEK = 0.0,
 	.actED = 0.0,
 	.rP= 0.0,
-	.xLiInit = 0.0,
 	.cLiMax = 0.0,
+	.cLiInit = 0.0,
 	.aLi = 0.0,
 	.Cdl = 0.0
 };
@@ -214,8 +198,10 @@ domain const ca =
 	.actEK = params["Cathode"]["actEK"].as<double>(),
 	.actED = params["Cathode"]["actED"].as<double>(),
 	.rP = params["Cathode"]["rP"].as<double>(),
-	.xLiInit = params["Cathode"]["xLiInit"].as<double>(),
 	.cLiMax = params["Cathode"]["cLiMax"].as<double>(),
+	.cLiInit = ((1-params["InitSOC"].as<double>()/100)*
+			(params["Cathode"]["xLiMax"].as<double>()-params["Cathode"]["xLiMin"].as<double>())
+			+params["Cathode"]["xLiMin"].as<double>())*ca.cLiMax,
 	.aLi = params["Cathode"]["aLi"].as<double>(),
 	.Cdl = params["Cathode"]["Cdl"].as<double>()
 };
@@ -242,8 +228,8 @@ domain const el =
 	.actEK = 0.0,
 	.actED = 0.0,
 	.rP = 0.0,
-	.xLiInit = 0.0,
 	.cLiMax = 0.0,
+	.cLiInit = 0.0,
 	.aLi = 0.0,
 	.Cdl = 0.0
 };
@@ -270,8 +256,10 @@ domain const an =
 	.actEK = params["Anode"]["actEK"].as<double>(),
 	.actED = params["Anode"]["actED"].as<double>(),
 	.rP = params["Anode"]["rP"].as<double>(),
-	.xLiInit = params["Anode"]["xLiInit"].as<double>(),
 	.cLiMax = params["Anode"]["cLiMax"].as<double>(),
+	.cLiInit = (params["InitSOC"].as<double>()/100*
+			(params["Anode"]["xLiMax"].as<double>()-params["Anode"]["xLiMin"].as<double>())
+			+params["Anode"]["xLiMin"].as<double>())*an.cLiMax,
 	.aLi = params["Anode"]["aLi"].as<double>(),
 	.Cdl = params["Anode"]["Cdl"].as<double>()
 };
@@ -298,8 +286,8 @@ domain const cu =
 	.actEK = 0.0,
 	.actED = 0.0,
 	.rP = 0.0,
-	.xLiInit = 0.0,
 	.cLiMax = 0.0,
+	.cLiInit = 0.0,
 	.aLi = 0.0,
 	.Cdl = 0.0
 };
@@ -328,7 +316,7 @@ inline double kappaS(size_t ix)
 // Electric conductivity solid
 inline double sigmaS(size_t ix)
 {
-	return getDomain(ix).sigmaS;
+	return getDomain(ix).sigmaS*(1-getDomain(ix).por-getDomain(ix).epsF);
 }
 // Electric conductivity liquid
 inline double sigmaL(double por, double ce, double T)
