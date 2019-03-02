@@ -118,7 +118,7 @@ int runP2D(void)
 	SUNMatrix A;
 	SUNLinearSolver LS;
 	size_t iout = 1;
-	std::vector<FILE*> files(NSPECIES);
+	std::vector<FILE*> files(NSPECIES+1);
 
 	mem = NULL;
 	data = NULL;
@@ -190,6 +190,8 @@ int runP2D(void)
 	files[data->idxT-1] = fopen("outP2D_Temperature.dat","w");
 	files[data->idxphiS-1] = fopen("outP2D_phiS.dat","w");
 	files[data->idxphiL-1] = fopen("outP2D_phiL.dat","w");
+	files[data->idxphiL-1] = fopen("outP2D_phiL.dat","w");
+	files[data->idxphiL] = fopen("outP2D_Vcell.dat","w");
 
 	printOutputP2D(mem, t0, uu, files, data);
 
@@ -215,6 +217,7 @@ int runP2D(void)
 	fclose(files[data->idxT-1]);
 	fclose(files[data->idxphiS-1]);
 	fclose(files[data->idxphiL-1]);
+	fclose(files[data->idxphiL]);
 	IDAFree(&mem);
 	SUNLinSolFree(LS);
 	SUNMatDestroy(A);
@@ -353,12 +356,6 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		diff_phiL2 = (jx >= ca.idx0 && jx <= an.idxL)?
 				diffrt/dx2rt*g*(T+Trt)/TWO*log(Cert/Ce)-difflt/dx2lt*g*(T+Tlt)/TWO*log(Ce/Celt):ZERO;
 		// Set source terms
-		qIrr = F*dom.aLi*iloc*(phiS-phiL-Ueq);
-		qRev = F*dom.aLi*iloc*T*dUdT;
-		qOut = p_h*(T-p_Tamb);
-		qTot = qIrr+qRev;
-		sT = (dom.domType==AL||dom.domType==CU)?
-				SUNSQR(p_Iapp)/sigmaS(jx):qTot;
 		iloc = TWO*rateConst(jx,T)*std::sqrt(Ce*(dom.cLiMax-Cs)*Cs)*std::sinh(0.5*R/(F*T)*(phiS-phiL-Ueq));
 		iloc = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:iloc;
@@ -367,9 +364,18 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		sCs = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:-dom.rP*iloc/(diffS(jx,T)*5);
 		sCe = dom.aLi*(1-p_tp)*iloc;
+		qIrr = F*dom.aLi*iloc*(phiS-phiL-Ueq);
+		qRev = F*dom.aLi*iloc*T*dUdT;
+		qOut = p_h*(T-p_Tamb);
+		qTot = qIrr+qRev;
+		sT = (dom.domType==AL||dom.domType==CU)?
+				SUNSQR(p_Iapp)/sigmaS(jx):qTot;
 		sphiS = dom.aLi*F*iloc;
 		sphiL = -dom.aLi*F*iloc;
-		//std::cout<<dom.domType<<" "<<iloc<<"\n";
+		/*
+		std::cout<<dom.domType<<" iloc: "<<iloc<<" sCsAvg: "<<sCsAvg<<" sCs: "<<sCs
+				<<" sCe: "<<sCe<<" sphiS: "<<sphiS<<" sphiL:"<<sphiL<<" sT: "<<sT<<"\n";
+		std::cout<<"Cs: "<<Cs<<" Ueq: "<<Ueq<<" dUdT:"<<dUdT<<"\n";*/
 		//
 		double rpor = (jx>=ca.idx0 && jx<=an.idxL)?1/dom.por:ZERO;
 		double rCdl = (dom.domType==CA||dom.domType==AN)?1/dom.Cdl:ZERO;
@@ -400,12 +406,8 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 static void printOutputP2D(void *mem, realtype t, N_Vector uu, std::vector<FILE*>fp,
 		void *user_data)
 {
-	int retval;
-	realtype hused;
 	realtype *udata;
 	double x = ZERO;
-	long int nst, nni, nje, nre, nreLS;
-	int kused;
 	UserData data;
 
 	data = (UserData)user_data;
@@ -415,13 +417,14 @@ static void printOutputP2D(void *mem, realtype t, N_Vector uu, std::vector<FILE*
 	{
 		domain dom = getDomain(jx);
 		x = (jx == 0) ? (x+dom.dx/2):(x+dom.dx);
-		fprintf(fp[data->idxCsAvg-1],"%.2e %I64u %12.7e %12.3e\n",t, jx, x, IJth(udata,data->idxCsAvg,jx));
-		fprintf(fp[data->idxCs-1],"%.2e %I64u %12.7e %12.3e\n",t, jx, x, IJth(udata,data->idxCs,jx));
-		fprintf(fp[data->idxCe-1],"%.2e %I64u %12.7e %12.3e\n",t, jx, x, IJth(udata,data->idxCe,jx));
-		fprintf(fp[data->idxT-1],"%.2e %I64u %12.7e %12.3e\n",t, jx, x, IJth(udata,data->idxT,jx));
-		fprintf(fp[data->idxphiS-1],"%.2e %I64u %12.7e %12.3e\n",t, jx, x, IJth(udata,data->idxphiS,jx));
-		fprintf(fp[data->idxphiL-1],"%.2e %I64u %12.7e %12.3e\n",t, jx, x, IJth(udata,data->idxphiL,jx));
+		fprintf(fp[data->idxCsAvg-1],"%.5e %I64u %12.7e %12.7e\n",t, jx, x, IJth(udata,data->idxCsAvg,jx));
+		fprintf(fp[data->idxCs-1],"%.5e %I64u %12.7e %12.7e\n",t, jx, x, IJth(udata,data->idxCs,jx));
+		fprintf(fp[data->idxCe-1],"%.5e %I64u %12.7e %12.7e\n",t, jx, x, IJth(udata,data->idxCe,jx));
+		fprintf(fp[data->idxT-1],"%.5e %I64u %12.7e %12.7e\n",t, jx, x, IJth(udata,data->idxT,jx));
+		fprintf(fp[data->idxphiS-1],"%.5e %I64u %12.7e %12.7e\n",t, jx, x, IJth(udata,data->idxphiS,jx));
+		fprintf(fp[data->idxphiL-1],"%.5e %I64u %12.7e %12.7e\n",t, jx, x, IJth(udata,data->idxphiL,jx));
 	}
+	fprintf(fp[data->idxphiL],"%.2e %12.7e %12.3e\n",t,IJth(udata,data->idxphiS,al.idx0),IJth(udata,data->idxphiS,cu.idxL));
 }
 
 /*

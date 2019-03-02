@@ -3,7 +3,7 @@
 model: 0 # [0 = SPM, 1 = SPMT, 2 = SPMe, 3 = SPMeT]
 tStart: 0
 tSteps: 1000
-tTotal: 1000
+tTotal: 3600
 rSteps: 100
 aTol: 1e-6
 rTol: 1e-6
