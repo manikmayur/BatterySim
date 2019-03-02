@@ -385,13 +385,11 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		diff_phiS = diffrt/dx2rt*(phiSrt-phiS)-difflt/dx2lt*(phiS-phiSlt);
 		sphiS = dom.aLi*F*iloc;
 		double rCdl = (dom.domType==CA||dom.domType==AN)?1/ca.Cdl:ZERO;
-		IJth(resv,data->idxphiS,jx) = IJth(updata,data->idxphiS,jx) - rCdl*(diff_phiS + sphiS);
-		/*double revD = (dom.domType==AL||dom.domType==CA||dom.domType==AN||dom.domType==CU)?
-								 1/(diffrt/dx2rt+difflt/dx2lt):ZERO;
-						std::cout<<dom.domType<<"revD: "<<revD<<" diffrt: "<<diffrt<<" dx2rt: "<<dx2rt<<" phiSrt: "<<phiSrt
-								<<" difflt: "<<difflt<<" dx2lt: "<<dx2lt<<" phiSlt: "<<phiSlt<<" phiS: "<<phiS<<"\n";
-						IJth(resv,data->idxphiS,jx) = IJth(udata,data->idxphiS,jx)
-								-revD*(diffrt/dx2rt*phiSrt + difflt/dx2lt*phiSlt - sphiS*0);*/
+		//IJth(resv,data->idxphiS,jx) = IJth(updata,data->idxphiS,jx) - rCdl*(diff_phiS + sphiS);
+		double revD = (dom.domType==AL||dom.domType==CA||dom.domType==AN||dom.domType==CU)?
+					1/(diffrt/dx2rt+difflt/dx2lt):ZERO;
+		IJth(resv,data->idxphiS,jx) = IJth(udata,data->idxphiS,jx)
+								-revD*(diffrt/dx2rt*phiSrt + difflt/dx2lt*phiSlt*0.9999999999 - sphiS);
 
 		// phiL
 		phiLlt = (jx == ca.idx0) ? phiL : IJth(udata,data->idxphiL,jx-1);

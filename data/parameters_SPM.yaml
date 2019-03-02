@@ -24,7 +24,7 @@ cathodeSurfaceName: "edge_cathode_electrolyte"
 anodeSurfaceName: "edge_anode_electrolyte"
 
 # Load parameters
-I1C: 29.23 # [A] 1.656 "1C discharge current"
+I1C: 29 # [A] 1.656 "1C discharge current"
 cR: -1 # [1] "C-rate"
 T_amb: 298.15 # [K] "Ambient temperature"
 InitSOC: 100 #[%] "Initial SOC"
@@ -105,7 +105,7 @@ Cathode: {
    cLiMax: 51554, # [mol/m3] "Max Lithium concentration"
    aLi: 885000, # [m2/m3] "Particle surface to area volume"
    diffS: 1e-14, # [m2/s] "Lithium diffusion in particle"
-   Cdl: 1e-20 # [F] "Double layer capacitance"
+   Cdl: 1e-1 # [F] "Double layer capacitance"
 }
 
 # Separator properties
