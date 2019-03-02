@@ -306,6 +306,18 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		phiL = IJth(udata,data->idxphiL,jx);
 		//
 		openCircuitPotential(jx, Cs, T, Ueq, dUdT);
+		iloc = TWO*rateConst(jx,T)*std::sqrt(Ce*(dom.cLiMax-Cs)*Cs)*std::sinh(0.5*R/(F*T)*(phiS-phiL-Ueq));
+		iloc = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
+				ZERO:iloc;
+		//
+		dx2lt = (jx == dom.idx0 && jx != al.idx0)?
+				dx(jx)*(dx(jx-1)+dx(jx))/TWO:SUNSQR(dx(jx));
+		dx2rt = (jx == dom.idxL && jx != cu.idxL)?
+				dx(jx)*(dx(jx)+dx(jx+1))/TWO:SUNSQR(dx(jx));
+		betal = (jx == dom.idx0 && jx != al.idx0)?
+				dx(jx-1)/(dx(jx)+dx(jx-1)):0.5;
+		betar = (jx == dom.idxL && jx != cu.idxL)?
+				dx(jx)/(dx(jx)+dx(jx+1)):0.5;
 		// Ce
 		Celt = (jx == ca.idx0) ? Ce : IJth(udata,data->idxCe,jx-1);
 		Cert = (jx == an.idxL) ? Ce : IJth(udata,data->idxCe,jx+1);
@@ -316,48 +328,74 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		Trt = ONE/(ONE+(p_h*cu.dx/(TWO*cu.kappaS)))*(p_h*cu.dx/cu.kappaS*p_Tamb
 			+(ONE-p_h*cu.dx/(TWO*cu.kappaS))*IJth(udata,data->idxT,cu.idxL));
 		Trt = (jx == cu.idxL) ? Trt : IJth(udata,data->idxT,jx+1);
-		// phiS
-		if (jx == al.idx0)
-			phiSlt = phiS+dom.dx*p_Iapp/dom.sigmaS;
-		else if (jx == an.idx0)
-			phiSlt = phiS;
-		else phiSlt = IJth(udata,data->idxphiS,jx-1);
-		if (jx == ca.idxL)
-			phiSrt = phiS;
-		else if (jx == cu.idxL)
-			phiSrt = phiS-dom.dx*p_Iapp/dom.sigmaS;
-		else phiSrt = IJth(udata,data->idxphiS,jx+1);
+
+		// CsAvg
+		sCsAvg = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
+				ZERO:-3.0*iloc/dom.rP;
+		IJth(resv,data->idxCsAvg, jx) = IJth(updata,data->idxCsAvg,jx) - sCsAvg;
+		// Cs
+		sCs = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
+				ZERO:-dom.rP*iloc/(diffS(jx,T)*5);
+		IJth(resv,data->idxCs,jx) = Cs-CsAvg-sCs;
 		//
-		phiLlt = (jx == ca.idx0) ? phiL : IJth(udata,data->idxphiL,jx-1);
-		phiLrt = (jx == an.idxL) ? -phiL : IJth(udata,data->idxphiL,jx+1);
-		//
-		dx2lt = (jx == dom.idx0 && jx != al.idx0)?
-				dx(jx)*(dx(jx-1)+dx(jx))/TWO:SUNSQR(dx(jx));
-		dx2rt = (jx == dom.idxL && jx != cu.idxL)?
-				dx(jx)*(dx(jx)+dx(jx+1))/TWO:SUNSQR(dx(jx));
-		betal = (jx == dom.idx0 && jx != al.idx0)?
-				dx(jx-1)/(dx(jx)+dx(jx-1)):0.5;
-		betar = (jx == dom.idxL && jx != cu.idxL)?
-				dx(jx)/(dx(jx)+dx(jx+1)):0.5;
 		// T
 		difflt = (jx == dom.idx0 && jx != al.idx0)?
 				kappaS(jx)*kappaS(jx-1)/(betal*kappaS(jx)+(1-betal)*kappaS(jx-1)):kappaS(jx);
 		diffrt = (jx == dom.idxL && jx != cu.idxL)?
 				kappaS(jx)*kappaS(jx+1)/(betar*kappaS(jx+1)+(1-betar)*kappaS(jx)):kappaS(jx);
 		diff_T = diffrt/dx2rt*(Trt-T)-difflt/dx2lt*(T-Tlt);
+		qIrr = F*dom.aLi*iloc*(phiS-phiL-Ueq);
+		qRev = F*dom.aLi*iloc*T*dUdT;
+		qOut = p_h*(T-p_Tamb);
+		qTot = qIrr+qRev;
+		sT = (dom.domType==AL||dom.domType==CU)?
+				SUNSQR(p_Iapp)/sigmaS(jx):qTot;
+		IJth(resv,data->idxT,jx) = IJth(updata,data->idxT,jx) - 1/(dom.rho*dom.cP)*(diff_T + sT);
 		// Ce
 		difflt = (jx == dom.idx0 && jx > ca.idx0)?
 				diffL(dom.por,Ce,T)*diffL((getDomain(jx-1)).por,Celt,Tlt)/(betal*diffL(dom.por,Ce,T)+(1-betal)*diffL((getDomain(jx-1)).por,Celt,Tlt)):diffL(dom.por,Ce,T);
 		diffrt = (jx == dom.idxL && jx < an.idxL)?
 				diffL(dom.por,Ce,T)*diffL((getDomain(jx+1)).por,Cert,Trt)/(betar*diffL((getDomain(jx+1)).por,Cert,Trt)+(1-betar)*diffL(dom.por,Ce,T)):diffL(dom.por,Ce,T);
 		diff_Ce = diffrt/dx2rt*(Cert-Ce)-difflt/dx2lt*(Ce-Celt);
+		sCe = dom.aLi*(1-p_tp)*iloc;
+		double rpor = (jx>=ca.idx0 && jx<=an.idxL)?1/dom.por:ZERO;
+		IJth(resv,data->idxCe,jx) = IJth(updata,data->idxCe,jx) - rpor*(diff_Ce + sCe);
+
 		// phiS
+		if (jx == al.idx0)
+			phiSlt = phiS-dom.dx*p_Iapp/dom.sigmaS;
+		else if (jx == an.idx0)
+			phiSlt = phiS;
+		else if (dom.domType==AL||dom.domType==CA||dom.domType==AN||dom.domType==CU)
+			phiSlt = IJth(udata,data->idxphiS,jx-1);
+		else
+			phiSlt = ZERO;
+		if (jx == ca.idxL)
+			phiSrt = phiS;
+		else if (jx == cu.idxL)
+			phiSrt = phiS+dom.dx*p_Iapp/dom.sigmaS;
+		else if (dom.domType==AL||dom.domType==CA||dom.domType==AN||dom.domType==CU)
+			phiSrt = IJth(udata,data->idxphiS,jx+1);
+		else
+			phiSrt = ZERO;
 		difflt = (jx == ca.idx0 || jx == cu.idx0)?
 				sigmaS(jx)*sigmaS(jx-1)/(betal*sigmaS(jx)+(1-betal)*sigmaS(jx-1)):sigmaS(jx);
-		diffrt = (jx == al.idxL || jx == an.idxL)?
+		diffrt = (jx == al.idxL|| jx == an.idxL)?
 				sigmaS(jx)*sigmaS(jx+1)/(betar*sigmaS(jx+1)+(1-betar)*sigmaS(jx)):sigmaS(jx);
 		diff_phiS = diffrt/dx2rt*(phiSrt-phiS)-difflt/dx2lt*(phiS-phiSlt);
+		sphiS = dom.aLi*F*iloc;
+		double rCdl = (dom.domType==CA||dom.domType==AN)?1/ca.Cdl:ZERO;
+		IJth(resv,data->idxphiS,jx) = IJth(updata,data->idxphiS,jx) - rCdl*(diff_phiS + sphiS);
+		/*double revD = (dom.domType==AL||dom.domType==CA||dom.domType==AN||dom.domType==CU)?
+								 1/(diffrt/dx2rt+difflt/dx2lt):ZERO;
+						std::cout<<dom.domType<<"revD: "<<revD<<" diffrt: "<<diffrt<<" dx2rt: "<<dx2rt<<" phiSrt: "<<phiSrt
+								<<" difflt: "<<difflt<<" dx2lt: "<<dx2lt<<" phiSlt: "<<phiSlt<<" phiS: "<<phiS<<"\n";
+						IJth(resv,data->idxphiS,jx) = IJth(udata,data->idxphiS,jx)
+								-revD*(diffrt/dx2rt*phiSrt + difflt/dx2lt*phiSlt - sphiS*0);*/
+
 		// phiL
+		phiLlt = (jx == ca.idx0) ? phiL : IJth(udata,data->idxphiL,jx-1);
+		phiLrt = (jx == an.idxL) ? -phiL : IJth(udata,data->idxphiL,jx+1);
 		difflt = (jx == dom.idx0 && jx > ca.idx0)?
 				sigmaL(dom.por,Ce,T)*sigmaL((getDomain(jx-1)).por,Celt,Tlt)/(betal*sigmaL(dom.por,Ce,T)+(1-betal)*sigmaL((getDomain(jx-1)).por,Celt,Tlt)):sigmaL(dom.por,Ce,T);
 		diffrt = (jx == dom.idxL && jx < an.idxL)?
@@ -366,37 +404,9 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 				diffrt/dx2rt*(phiLrt-phiL)-difflt/dx2lt*(phiL-phiLlt):ZERO;
 		diff_phiL2 = (jx >= ca.idx0 && jx <= an.idxL)?
 				diffrt/dx2rt*g*(T+Trt)/TWO*log(Cert/Ce)-difflt/dx2lt*g*(T+Tlt)/TWO*log(Ce/Celt):ZERO;
-		// Set source terms
-		iloc = TWO*rateConst(jx,T)*std::sqrt(Ce*(dom.cLiMax-Cs)*Cs)*std::sinh(0.5*R/(F*T)*(phiS-phiL-Ueq));
-		iloc = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
-				ZERO:iloc;
-		sCsAvg = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
-				ZERO:-3.0*iloc/dom.rP;
-		sCs = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
-				ZERO:-dom.rP*iloc/(diffS(jx,T)*5);
-		sCe = dom.aLi*(1-p_tp)*iloc;
-		qIrr = F*dom.aLi*iloc*(phiS-phiL-Ueq);
-		qRev = F*dom.aLi*iloc*T*dUdT;
-		qOut = p_h*(T-p_Tamb);
-		qTot = qIrr+qRev;
-		sT = (dom.domType==AL||dom.domType==CU)?
-				SUNSQR(p_Iapp)/sigmaS(jx):qTot;
-		sphiS = dom.aLi*F*iloc;
 		sphiL = -dom.aLi*F*iloc;
-		/*std::cout<<dom.domType<<" iloc: "<<iloc<<" sCsAvg: "<<sCsAvg<<" sCs: "<<sCs
-				<<" sCe: "<<sCe<<" sphiS: "<<sphiS<<" sphiL:"<<sphiL<<" sT: "<<sT<<"\n";
-		std::cout<<"Cs: "<<Cs<<" Ueq: "<<Ueq<<" dUdT:"<<dUdT<<"\n";
-		std::cout<<"diff_phiS: "<<diff_phiS<<" diff_phiL1: "<<diff_phiL1<<" diff_phiL2:"<<diff_phiL2<<"\n";
-		*/
-		//
-		double rpor = (jx>=ca.idx0 && jx<=an.idxL)?1/dom.por:ZERO;
-		double rCdl = (dom.domType==CA||dom.domType==AN)?1/dom.Cdl:ZERO;
-		IJth(resv,data->idxCsAvg, jx) = IJth(updata,data->idxCsAvg,jx) - sCsAvg;
-		IJth(resv,data->idxCs,jx) = Cs-CsAvg-sCs;
-		IJth(resv,data->idxCe,jx) = IJth(updata,data->idxCe,jx) - rpor*(diff_Ce + sCe);
-		IJth(resv,data->idxT,jx) = IJth(updata,data->idxT,jx) - 1/(dom.rho*dom.cP)*(diff_T + sT);
-		IJth(resv,data->idxphiS,jx) = IJth(updata,data->idxphiS,jx) - rCdl*(diff_phiS + sphiS);
 		IJth(resv,data->idxphiL,jx) = IJth(updata,data->idxphiL,jx) - rCdl*(diff_phiL1 + diff_phiL2 + sphiL);
+
 	}
 	return(0);
 }
