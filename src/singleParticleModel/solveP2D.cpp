@@ -319,18 +319,6 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		betar = (jx == dom.idxL && jx != cu.idxL)?
 				dx(jx)/(dx(jx)+dx(jx+1)):0.5;
 
-		// Ce
-		Celt = (jx == ca.idx0) ? Ce : IJth(udata,data->idxCe,jx-1);
-		Cert = (jx == an.idxL) ? Ce : IJth(udata,data->idxCe,jx+1);
-
-		// T
-		Tlt = ONE/(ONE+(p_h*al.dx/(TWO*al.kappaS)))*(p_h*al.dx/al.kappaS*p_Tamb
-			+(ONE-p_h*al.dx/(TWO*al.kappaS))*IJth(udata,data->idxT,al.idx0));
-		Tlt = (jx == al.idx0) ? Tlt : IJth(udata,data->idxT,jx-1);
-		Trt = ONE/(ONE+(p_h*cu.dx/(TWO*cu.kappaS)))*(p_h*cu.dx/cu.kappaS*p_Tamb
-			+(ONE-p_h*cu.dx/(TWO*cu.kappaS))*IJth(udata,data->idxT,cu.idxL));
-		Trt = (jx == cu.idxL) ? Trt : IJth(udata,data->idxT,jx+1);
-
 		// CsAvg
 		sCsAvg = (dom.domType==CA||dom.domType==AN)?
 				-3.0*jloc/dom.rP:ZERO;
@@ -342,6 +330,12 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		IJth(resv,data->idxCs,jx) = IJth(udata,data->idxCs,jx) - IJth(udata,data->idxCsAvg,jx) - sCs;
 
 		// T
+		Tlt = ONE/(ONE+(p_h*al.dx/(TWO*al.kappaS)))*(p_h*al.dx/al.kappaS*p_Tamb
+			+(ONE-p_h*al.dx/(TWO*al.kappaS))*IJth(udata,data->idxT,al.idx0));
+		Tlt = (jx == al.idx0) ? Tlt : IJth(udata,data->idxT,jx-1);
+		Trt = ONE/(ONE+(p_h*cu.dx/(TWO*cu.kappaS)))*(p_h*cu.dx/cu.kappaS*p_Tamb
+			+(ONE-p_h*cu.dx/(TWO*cu.kappaS))*IJth(udata,data->idxT,cu.idxL));
+		Trt = (jx == cu.idxL) ? Trt : IJth(udata,data->idxT,jx+1);
 		difflt = (jx == dom.idx0 && jx != al.idx0)?
 				kappaS(jx)*kappaS(jx-1)/(betal*kappaS(jx)+(1-betal)*kappaS(jx-1)):kappaS(jx);
 		diffrt = (jx == dom.idxL && jx != cu.idxL)?
@@ -356,6 +350,8 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		IJth(resv,data->idxT,jx) = IJth(updata,data->idxT,jx) - 1/(dom.rho*dom.cP)*(diff_T + sT);
 
 		// Ce
+		Celt = (jx == ca.idx0) ? Ce : IJth(udata,data->idxCe,jx-1);
+		Cert = (jx == an.idxL) ? Ce : IJth(udata,data->idxCe,jx+1);
 		difflt = (jx == dom.idx0 && jx > ca.idx0)?
 				diffL(dom.por,Ce,T)*diffL((getDomain(jx-1)).por,Celt,Tlt)/(betal*diffL(dom.por,Ce,T)+(1-betal)*diffL((getDomain(jx-1)).por,Celt,Tlt)):diffL(dom.por,Ce,T);
 		diffrt = (jx == dom.idxL && jx < an.idxL)?
