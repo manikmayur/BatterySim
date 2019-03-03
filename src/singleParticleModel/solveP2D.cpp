@@ -311,7 +311,7 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		//
 		openCircuitPotential(jx, Cs, T, Ueq, dUdT);
 		// !TODO: Check jloc exp prefactor
-		jloc = TWO*rateConst(jx,T)*std::sqrt(Ce*(dom.cLiMax-Cs)*Cs)*std::sinh(1e-3*F/(R*T)*(phiS-phiL-Ueq));
+		jloc = TWO*rateConst(jx,T)*std::sqrt(Ce*(dom.cLiMax-Cs)*Cs)*std::sinh(0.002*F/(R*T)*(phiS-phiL-Ueq));
 		jloc = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:jloc;
 		//
@@ -394,7 +394,7 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 					1/(diffrt/dx2rt+difflt/dx2lt):ZERO;
 		// !TODO: Check phiSlt prefactor
 		IJth(resv,data->idxphiS,jx) = IJth(udata,data->idxphiS,jx)
-								-revD*(diffrt/dx2rt*phiSrt + difflt/dx2lt*phiSlt*0.999999999984 - sphiS);
+								-revD*(diffrt/dx2rt*phiSrt + difflt/dx2lt*phiSlt*0.99999999999 - sphiS);
 		// phiL
 		phiLlt = (jx == ca.idx0) ? phiL : IJth(udata,data->idxphiL,jx-1);
 		phiLrt = (jx == an.idxL) ? -phiL : IJth(udata,data->idxphiL,jx+1);
