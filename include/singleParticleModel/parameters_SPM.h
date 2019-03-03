@@ -91,7 +91,7 @@ double const p_S_an = params["S_an"].as<double>();
 // Electrolyte material parameters
 double const p_cE = params["cE"].as<double>(); // [mol/m^3] "Electrolyte concentration"
 double const p_cE_ref = params["cE_ref"].as<double>(); // [mol/m^3] "Electrolyte reference concentration"
-double const p_tp = 0.3; // [] Transference number
+double const p_tp = params["tP"].as<double>(); // [1] Transference number
 
 double const p_theta1 = (-5.636e-7*abs(p_Iapp) - 7.283e-6)*pow((p_Tamb - 273.15),3)
    + (5.676e-5*abs(p_Iapp) + 6.453e-4)*pow((p_Tamb - 273.15),2)

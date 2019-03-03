@@ -73,6 +73,7 @@ static int SetInitialProfile(UserData data, N_Vector uu, N_Vector up,
 {
 	realtype *udata, *updata, *iddata;
 	domain dom;
+	double U, dUdT;
 	udata = N_VGetArrayPointer(uu);
 	updata = N_VGetArrayPointer(up);
 	iddata = N_VGetArrayPointer(id);
@@ -87,8 +88,14 @@ static int SetInitialProfile(UserData data, N_Vector uu, N_Vector up,
 		IJth(udata,data->idxCs,jx) = dom.cLiInit;
 		IJth(udata,data->idxCe,jx) = (jx<ca.idx0||jx>an.idxL)?ZERO:p_cE;
 		IJth(udata,data->idxT,jx) = Tref;
-		IJth(udata,data->idxphiS,jx) = ZERO;
+		if (dom.domType==CA || dom.domType==AN)
+		{
+			openCircuitPotential(jx, dom.cLiInit, Tref, U, dUdT);
+			IJth(udata,data->idxphiS,jx) = U;
+		}
+		else IJth(udata,data->idxphiS,jx) = ZERO;
 		IJth(udata,data->idxphiL,jx) = ZERO;
+
 		//
 		IJth(iddata,data->idxCs,jx) = ZERO;
 		IJth(iddata,data->idxphiS,jx) = ZERO;
@@ -302,11 +309,9 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		phiS = IJth(udata,data->idxphiS,jx);
 		phiL = IJth(udata,data->idxphiL,jx);
 		//
-		Ueq = ZERO;
-		dUdT = ZERO;
-		if (dom.domType==CA||dom.domType==AN) openCircuitPotential(jx, Cs, T, Ueq, dUdT);
+		openCircuitPotential(jx, Cs, T, Ueq, dUdT);
 		// !TODO: Check jloc exp prefactor
-		jloc = TWO*rateConst(jx,T)*std::sqrt(Ce*(dom.cLiMax-Cs)*Cs)*std::sinh(0.8e-6*F/(R*T)*(phiS-phiL-Ueq));
+		jloc = TWO*rateConst(jx,T)*std::sqrt(Ce*(dom.cLiMax-Cs)*Cs)*std::sinh(1e-3*F/(R*T)*(phiS-phiL-Ueq));
 		jloc = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:jloc;
 		//
@@ -407,6 +412,10 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 							1/(diffrt/dx2rt+difflt/dx2lt):ZERO;
 		IJth(resv,data->idxphiL,jx) = IJth(udata,data->idxphiL,jx)
 				- revD*(diffrt/dx2rt*phiLrt + difflt/dx2lt*phiLlt - diff_phiL2 - sphiL);
+
+		/*std::cout<<dom.domType<<" sCe: "<<sCe<<" sCs: "<<sCs<<" phiS: "<<phiS
+				<<" phiL: "<<phiL<<" phieq: "<<Ueq<<" jloc: "<<jloc<<"\n";
+				*/
 	}
 	return(0);
 }

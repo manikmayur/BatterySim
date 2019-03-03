@@ -24,7 +24,7 @@ cathodeSurfaceName: "edge_cathode_electrolyte"
 anodeSurfaceName: "edge_anode_electrolyte"
 
 # Load parameters
-I1C: 29 # [A] 1.656 "1C discharge current"
+I1C: 0 # [A] 1.656 "1C discharge current"
 cR: -1 # [1] "C-rate"
 T_amb: 298.15 # [K] "Ambient temperature"
 InitSOC: 100 #[%] "Initial SOC"
@@ -59,6 +59,7 @@ S_an: 0.7824 # [m^2] "Cathode geomtric area"
 # Electrolyte material parameters
 cE: 1000 # [mol/m^3] "Electrolyte concentration"
 cE_ref: 1000 # [mol/m^3] "Electrolyte reference concentration"
+tP: 0.364 # [1] Transference number
 
 # Active material properties
 DLi: 6e-14 #[m^2/s] Diffusion coefficient of Li in active material (Laresgoiti 2015 JPS)
