@@ -83,8 +83,8 @@ static int SetInitialProfile(UserData data, N_Vector uu, N_Vector up,
 	for (size_t jx=0; jx < NX; jx++)
 	{
 		dom = getDomain(jx);
-		IJth(udata,data->idxCsAvg,jx) = (dom.domType==CA||dom.domType==AN)?dom.cLiInit:ZERO;
-		IJth(udata,data->idxCs,jx) = (dom.domType==CA||dom.domType==AN)?dom.cLiInit:ZERO;
+		IJth(udata,data->idxCsAvg,jx) = dom.cLiInit;
+		IJth(udata,data->idxCs,jx) = dom.cLiInit;
 		IJth(udata,data->idxCe,jx) = (jx<ca.idx0||jx>an.idxL)?ZERO:p_cE;
 		IJth(udata,data->idxT,jx) = Tref;
 		IJth(udata,data->idxphiS,jx) = ZERO;
@@ -93,9 +93,6 @@ static int SetInitialProfile(UserData data, N_Vector uu, N_Vector up,
 		IJth(iddata,data->idxCs,jx) = ZERO;
 		IJth(iddata,data->idxphiS,jx) = ZERO;
 		IJth(iddata,data->idxphiL,jx) = ZERO;
-		IJth(updata,data->idxCs,jx) = ZERO;
-		IJth(updata,data->idxphiS,jx) = ZERO;
-		IJth(updata,data->idxphiL,jx) = ZERO;
 	}
 	/* Initialize up vector to 0. */
 	 N_VConst(ZERO, up);
@@ -305,8 +302,11 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		phiS = IJth(udata,data->idxphiS,jx);
 		phiL = IJth(udata,data->idxphiL,jx);
 		//
-		openCircuitPotential(jx, Cs, T, Ueq, dUdT);
-		jloc = TWO*rateConst(jx,T)*std::sqrt(Ce*(dom.cLiMax-Cs)*Cs)*std::sinh(0.5*R/(F*T)*(phiS-phiL-Ueq));
+		Ueq = ZERO;
+		dUdT = ZERO;
+		if (dom.domType==CA||dom.domType==AN) openCircuitPotential(jx, Cs, T, Ueq, dUdT);
+		// !TODO: Check jloc exp prefactor
+		jloc = TWO*rateConst(jx,T)*std::sqrt(Ce*(dom.cLiMax-Cs)*Cs)*std::sinh(0.8e-6*F/(R*T)*(phiS-phiL-Ueq));
 		jloc = (dom.domType==AL||dom.domType==EL||dom.domType==CU)?
 				ZERO:jloc;
 		//
@@ -318,9 +318,11 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 				dx(jx-1)/(dx(jx)+dx(jx-1)):0.5;
 		betar = (jx == dom.idxL && jx != cu.idxL)?
 				dx(jx)/(dx(jx)+dx(jx+1)):0.5;
+
 		// Ce
 		Celt = (jx == ca.idx0) ? Ce : IJth(udata,data->idxCe,jx-1);
 		Cert = (jx == an.idxL) ? Ce : IJth(udata,data->idxCe,jx+1);
+
 		// T
 		Tlt = ONE/(ONE+(p_h*al.dx/(TWO*al.kappaS)))*(p_h*al.dx/al.kappaS*p_Tamb
 			+(ONE-p_h*al.dx/(TWO*al.kappaS))*IJth(udata,data->idxT,al.idx0));
@@ -389,6 +391,7 @@ int heatres(realtype tres, N_Vector uu, N_Vector up, N_Vector resval,
 		//IJth(resv,data->idxphiS,jx) = IJth(updata,data->idxphiS,jx) - rCdl*(diff_phiS + sphiS);
 		double revD = (dom.domType==AL||dom.domType==CA||dom.domType==AN||dom.domType==CU)?
 					1/(diffrt/dx2rt+difflt/dx2lt):ZERO;
+		// !TODO: Check phiSlt prefactor
 		IJth(resv,data->idxphiS,jx) = IJth(udata,data->idxphiS,jx)
 								-revD*(diffrt/dx2rt*phiSrt + difflt/dx2lt*phiSlt*0.999999999984 - sphiS);
 		// phiL
