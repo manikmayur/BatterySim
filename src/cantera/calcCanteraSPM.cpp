@@ -20,9 +20,9 @@ static Cantera::Interface *surfaceAN;
 
 void initCanteraSPM()
 {
-	// import the reference bulk phases
+	// Import the reference bulk phases
+    Cantera::ThermoPhase* cathode = Cantera::newPhase(p_inputFile, p_nameCathodePhase);
 	Cantera::ThermoPhase* anode = Cantera::newPhase(p_inputFile, p_nameAnodePhase);
-	Cantera::ThermoPhase* cathode = Cantera::newPhase(p_inputFile, p_nameCathodePhase);
 	Cantera::ThermoPhase* cond = Cantera::newPhase(p_inputFile, p_nameConductorPhase);
 	Cantera::ThermoPhase* elyte = Cantera::newPhase(p_inputFile, p_nameElectrolytePhase);
 
@@ -99,7 +99,7 @@ double calc_potCantera(std::string surfName, double xLi, double phiL, double I, 
 		}
 		for (size_t k = 0; k < newSurf.surface->nPhases(); k++)
 		{
-			newSurf.surface->thermo(k).setState_TP(T,P);
+			newSurf.surface->thermo(k).setState_TP(T,Pref);
 			if (newSurf.surface->thermo(k).name().compare(p_nameElectrolytePhase)==0)
 			{
 				idxElyte = k;
@@ -149,7 +149,7 @@ double calc_entropyCantera(std::string surfName, double xLi, double T)
 		}
 		for (size_t k = 0; k < newSurf.surface->nPhases(); k++)
 		{
-			newSurf.surface->thermo(k).setState_TP(T,P);
+			newSurf.surface->thermo(k).setState_TP(T,Pref);
 			if (newSurf.surface->thermo(k).name().compare(p_nameCathodePhase)==0 || newSurf.surface->thermo(k).name().compare(p_nameAnodePhase)==0)
 			{
 				idxElode = k;

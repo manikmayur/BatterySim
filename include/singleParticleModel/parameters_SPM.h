@@ -19,7 +19,7 @@ enum domainType {AL,CA,EL,AN,CU};
 int const F = 96485; // [C/mol] "Faraday constant"
 double const R = 8.314; // [J/(mol.K)] "Universal gas constant"
 double const Tref = 298.15; // [K] Reference temperature
-double const P = 101325.0; // [Pa] Pressure
+double const Pref = 101325.0; // [Pa] Pressure
 
 std::string const paramFile = "data/parameters_SPM.yaml"; // XML file name
 YAML::Node const static params = YAML::LoadFile(paramFile);

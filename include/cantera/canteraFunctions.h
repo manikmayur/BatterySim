@@ -24,8 +24,8 @@ void initCanteraCV();
 void calc_ropCanteraCV_2s(doublereal cA, doublereal cB, doublereal t, doublereal *rop, doublereal phis);
 //
 void initCanteraSPM();
-double calc_potCantera(std::string surfName, double xLi, double phiL, double Iapp, double T=298.15);
-double calc_entropyCantera(std::string surfName, double xLi, double T=298.15);
+double calc_potCantera(std::string surfName, double xLi, double phiL, double Iapp, double T);
+double calc_entropyCantera(std::string surfName, double xLi, double T);
 double calc_ilocCantera(double phiS);
 size_t getPhaseIdxbyName(std::string phaseName, Cantera::Interface *surface);
 
