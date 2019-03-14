@@ -6,9 +6,9 @@
 // Description : Hello World in C++, Ansi-style
 //============================================================================
 
-#include <utilities/Utilities.h>
+#include "utilities/Utilities.h"
 
-std::string exec(const char* cmd)
+std::string execCMD(const char* cmd)
 {
     std::array<char, 128> buffer;
     std::string result;

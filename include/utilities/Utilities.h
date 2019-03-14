@@ -18,10 +18,10 @@
 #include <array>
 
 // Sort string by length
-bool sortbystrlength(std::string lhs, std::string rhs) {return lhs.length() > rhs.length();}
+static bool sortbystrlength(std::string lhs, std::string rhs) {return lhs.length() > rhs.length();}
 
 // Get message from stderr to log file
-std::string exec(const char* cmd);
+static std::string execCMD(const char* cmd);
 
 
 
