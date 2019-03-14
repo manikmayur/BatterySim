@@ -24,7 +24,7 @@ cathodeSurfaceName: "edge_cathode_electrolyte"
 anodeSurfaceName: "edge_anode_electrolyte"
 
 # Load parameters
-I1C: 0 # [A] 1.656 "1C discharge current"
+I1C: 1.656 # [A] 1.656 "1C discharge current"
 cR: -1 # [1] "C-rate"
 T_amb: 298.15 # [K] "Ambient temperature"
 InitSOC: 100 #[%] "Initial SOC"

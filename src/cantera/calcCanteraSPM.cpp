@@ -10,7 +10,7 @@
 #include <iostream>
 typedef struct
 {
-	Cantera::Interface * surface;
+	Cantera::Interface *surface;
 	phaseType pT;
 } surfPhase;
 
@@ -21,6 +21,8 @@ static Cantera::Interface *surfaceAN;
 void initCanteraSPM()
 {
 	// Import the reference bulk phases
+    try
+    {
     Cantera::ThermoPhase* cathode = Cantera::newPhase(p_inputFile, p_nameCathodePhase);
 	Cantera::ThermoPhase* anode = Cantera::newPhase(p_inputFile, p_nameAnodePhase);
 	Cantera::ThermoPhase* cond = Cantera::newPhase(p_inputFile, p_nameConductorPhase);
@@ -39,6 +41,14 @@ void initCanteraSPM()
 	// Import the surfaces
 	surfaceCA = Cantera::importInterface(p_inputFile, p_nameCathodeSurf, phaseListCathode);
 	surfaceAN = Cantera::importInterface(p_inputFile, p_nameAnodeSurf, phaseListAnode);
+    }
+    catch (Cantera::CanteraError& err)
+    {
+            // handle exceptions thrown by Cantera
+            std::cout << err.what() << std::endl;
+            std::cout << " terminating... " << std::endl;
+            Cantera::appdelete();
+    }
 }
 
 double calc_ilocCantera(double phiS)

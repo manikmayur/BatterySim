@@ -142,7 +142,7 @@ int runSolver()
         {
             case SPM:
                 f = &fSPM;
-                nVariables = 2;
+                nVariables = 4;
                 pFile = fopen("outSPM.dat","w");
                 fprintf(pFile, "# t xLi_ca xLi_an V_ca V_an\n");
                 break;
@@ -176,6 +176,9 @@ int runSolver()
 
         InitUserData(data);
 
+        /* Initialite Cantera */
+        initCanteraSPM();
+
         /* Initialize uu, up, id. */
         SetInitialProfile(data, uu, up, id, res);
 
@@ -184,9 +187,6 @@ int runSolver()
         t1   = RCONST(0.01);
         rtol = RTOL;
         atol = ATOL;
-
-        /* Initialite Cantera */
-        initCanteraSPM();
 
         /* Call IDACreate and IDAMalloc to initialize solution */
         mem = IDACreate();
@@ -240,7 +240,7 @@ int runSolver()
         {
             retval = IDASolve(mem, tout, &tret, uu, up, IDA_NORMAL);
             PrintOutput(mem, uu, tret, pFile);
-            if(check_flag(&retval, "CVode", 1)) break;
+            if(check_flag(&retval, "IDASolve", 1)) break;
         }
 
         /* Free memory */
@@ -252,7 +252,7 @@ int runSolver()
         N_VDestroy(uu);
         N_VDestroy(up);
         N_VDestroy(res);
-        free(data);
+        //free(data);
         return(0);
     }
     catch(std::exception &err)
@@ -288,9 +288,10 @@ static void FreeUserData(UserData data)
 static void SetInitialProfile(UserData data, N_Vector uu, N_Vector up,
         N_Vector id, N_Vector res)
 {
-    realtype *udata;
+    realtype *udata, *iddata;
 
     udata = N_VGetArrayPointer(uu);
+    iddata = N_VGetArrayPointer(id);
 
     /* Initialize id to 1's. */
     N_VConst(ONE, id);
@@ -306,6 +307,10 @@ static void SetInitialProfile(UserData data, N_Vector uu, N_Vector up,
             {
                 IJth(udata,1,jx) = p_xLimin_ca;
                 IJth(udata,2,jx) = p_xLimax_an;
+                IJth(udata,3,jx) = ZERO;
+                IJth(iddata,3,jx) = ZERO;
+                IJth(udata,4,jx) = ZERO;
+                IJth(iddata,4,jx) = ZERO;
             }
             /* fSPM sets res to negative of ODE RHS values at interior points. */
             fSPM(ZERO, uu, up, res, data);
@@ -338,9 +343,7 @@ static void PrintOutput(void *mem, N_Vector u, realtype t, FILE *fp)
     switch (p_model)
     {
         case SPM:
-            potCA = calc_potCantera(p_nameCathodeSurf, IJth(udata,1,mx1), p_Iapp*p_Rel(Tref), p_Iapp, Tref);
-            potAN = calc_potCantera(p_nameAnodeSurf, IJth(udata,2,mx1), 0.0, p_Iapp, Tref);
-            fprintf(fp, "%.2e %12.3e %12.3e %12.3e %12.3e\n",t, IJth(udata,1,mx1), IJth(udata,2,mx1), potCA+3.0, potAN+3.0);
+            fprintf(fp, "%.2e %12.3e %12.3e %12.3e %12.3e\n",t, IJth(udata,1,mx1), IJth(udata,2,mx1), IJth(udata,3,mx1)+3.0, IJth(udata,4,mx1)+3.0);
             break;
         case SPMT:
             potCA = calc_potCantera(p_nameCathodeSurf, IJth(udata,1,mx1), p_Iapp*p_Rel(IJth(udata,3,mx1)), p_Iapp, IJth(udata,3,mx1));
@@ -407,6 +410,8 @@ static int fSPM(realtype t, N_Vector u, N_Vector udot, N_Vector resval,
     res = N_VGetArrayPointer(resval);
 
     /* Loop over all grid points. */
+    double potCA = calc_potCantera(p_nameCathodeSurf, IJth(udata,1,MR-1), p_Iapp*p_Rel(Tref), p_Iapp, Tref);
+    double potAN = calc_potCantera(p_nameAnodeSurf, IJth(udata,2,MR-1), 0, p_Iapp, Tref);
 
     for (jx=0; jx < MR; jx++) {
 
@@ -443,9 +448,10 @@ static int fSPM(realtype t, N_Vector u, N_Vector udot, N_Vector resval,
         /*Equation: dci/dt = (Di*dci/dx)
          * dci/dt = Di*(c1rt - TWO*c1 + c1lt)/dx2
          * */
-
         IJth(res, 1, jx) = IJth(dudata, 1, jx) - hordcoA/SUNSQR(p_rP_ca);
         IJth(res, 2, jx) = IJth(dudata, 2, jx) - hordcoB/SUNSQR(p_rP_an);
+        IJth(res, 3, jx) = IJth(udata, 3, jx) - potCA;
+        IJth(res, 4, jx) = IJth(udata, 4, jx) - potAN;
     }
 
     return(0);

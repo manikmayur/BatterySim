@@ -491,7 +491,7 @@ void printThermoReactionFerrocene(std::string inFile) {
         {
         	double d0, d1, d2, d3, d4, rop[3];
         	std::sscanf(line.c_str(),"%lf\t%lf\t%lf\t%lf\t%lf", &d0, &d1, &d2, &d3, &d4);
-        	calc_itotCantera2s(d1, d2, d0, rop, d3);
+        	//calc_itotCantera2s(d1, d2, d0, rop, d3);
         	fprintf (pFile, "%.2e\t%12.3e\t%12.3e\t%12.3e\t%12.3e\n",d0, d1, d2, d3, rop[2]*96485);
         }
 		/* Free memory */
