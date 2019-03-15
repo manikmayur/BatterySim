@@ -53,6 +53,7 @@ double const p_Iapp = p_cR*p_I1C; // [A] "Applied current"
 double const p_tInit = params["tStart"].as<double>();
 double const p_tTotal = params["tTotal"].as<double>(); // [s] "Total runtime"
 double const p_Tamb = params["T_amb"].as<double>(); // [K] "Ambient temperature"
+double const p_Vcut = params["V_cutoff"].as<double>(); // [V] "Cutoff voltage"
 
 double const p_h = 1; //[W/m2K]
 double const p_brugg = 0.4;

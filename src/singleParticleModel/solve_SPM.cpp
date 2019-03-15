@@ -107,7 +107,7 @@ static int fSPM(double t, N_Vector u, N_Vector udot, N_Vector resval,
 //static int fSPMT(double t, N_Vector u, N_Vector udot, void *user_data);
 static int fSPMT(realtype t, N_Vector u, N_Vector udot, N_Vector resval,
         void *user_data);
-
+static boolean check_cutoff(N_Vector u);
 /* Main Program */
 
 int main(void)
@@ -241,6 +241,7 @@ int runSolver()
             retval = IDASolve(mem, tout, &tret, uu, up, IDA_NORMAL);
             PrintOutput(mem, uu, tret, pFile);
             if(check_flag(&retval, "IDASolve", 1)) break;
+            if(check_cutoff(uu)) break;
         }
 
         /* Free memory */
@@ -535,4 +536,13 @@ static int fSPMT(realtype t, N_Vector u, N_Vector udot, N_Vector resval,
         IJth(res, 3, jx) = IJth(dudata, 3, jx) - 1/(p_rhoCell*p_volCell*p_cpCell)*(qIrr+qRev-qOut);
     }
     return(0);
+}
+
+static boolean check_cutoff(N_Vector u)
+{
+    double *udata, Vc;
+    udata = N_VGetArrayPointer(u);
+    Vc = IJth(udata,3,MR-1)-IJth(udata,4,MR-1);
+    if (Vc<p_Vcut) return true;
+    return false;
 }

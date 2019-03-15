@@ -28,6 +28,7 @@ I1C: 1.656 # [A] 1.656 "1C discharge current"
 cR: -1 # [1] "C-rate"
 T_amb: 298.15 # [K] "Ambient temperature"
 InitSOC: 100 #[%] "Initial SOC"
+V_cutoff: 3.6 #[V] "Cut-off voltage"
 
 # Cell parameters
 L_sep: 25e-6 # [m] "Separator thickness"
